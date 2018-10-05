@@ -12,7 +12,7 @@ tags:
 
 ##服务器端
 
-'''python
+'''
 import socket
 import time
 HOST = ''   #空字符串标示127.0.0.1
