@@ -25,25 +25,6 @@ sk.bind((HOST,PORT))
 
 sk.listen(100)
 
-# cli, addr = sk.accept() # 等待连接(阻塞式),在连接到来之前会阻塞在这里
-#
-# print("Client Addr:", addr)
-#
-# while True:
-#     print("18")
-#     data = cli.recv(1024) #该方法阻塞的。客户端结束，这里接收空字符串
-#     print("20")
-#     if not data:
-#         print(data,"datakong")
-#         break
-#     print("Recieve Data:", data.decode('utf-8'),"port",addr)
-#     # time.sleep(1)
-#     cli.send(b"s")
-#
-# cli.close()
-# print("服务器端结束")
-#
-
 while True:
     cli, addr = sk.accept()  # 等待连接(阻塞式),在连接到来之前会阻塞在这里
     print("Client Addr:", addr)
@@ -60,4 +41,4 @@ while True:
 
     cli.close()
     print("服务器端结束")
-    '''
+'''
