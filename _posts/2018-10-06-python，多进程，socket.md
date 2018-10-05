@@ -15,16 +15,11 @@ tags:
 '''python
 import socket
 import time
-
 HOST = ''   #空字符串标示127.0.0.1
 PORT = 3214
-
 sk = socket.socket() # 默认使用IPV4和TCP
-
 sk.bind((HOST,PORT))
-
 sk.listen(100)
-
 while True:
     cli, addr = sk.accept()  # 等待连接(阻塞式),在连接到来之前会阻塞在这里
     print("Client Addr:", addr)
@@ -38,7 +33,6 @@ while True:
         print("Recieve Data:", data.decode('utf-8'), "port", addr)
         # time.sleep(1)
         cli.send(b"s")
-
     cli.close()
     print("服务器端结束")
 '''
