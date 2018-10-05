@@ -61,7 +61,7 @@ while True:
 
 #客户端
 
-···py
+```py
 import socket
 import time
 import threading
@@ -113,5 +113,4 @@ def plus():
 for i in range(60):
     t = threading.Thread(target=plus)
     t.start()
-
-···
+```
