@@ -12,7 +12,8 @@ tags:
 
 ##服务器端
 
-'''import socket
+'''python
+import socket
 import time
 
 HOST = ''   #空字符串标示127.0.0.1
@@ -58,4 +59,5 @@ while True:
         cli.send(b"s")
 
     cli.close()
-    print("服务器端结束")'''
+    print("服务器端结束")
+    '''
