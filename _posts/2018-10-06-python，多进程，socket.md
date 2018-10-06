@@ -10,7 +10,7 @@ tags:
     - python
 ---
 
-#服务器端
+# 服务器端
 
 
 ```py
@@ -59,7 +59,7 @@ while True:
     print("服务器端结束")
 ```
 
-#客户端
+# 客户端
 
 ```py
 import socket
