@@ -31,7 +31,9 @@ sk.listen(100)
 # print("Client Addr:", addr)
 #
 # while True:
+#     print("18")
 #     data = cli.recv(1024) #该方法阻塞的。客户端结束，这里接收空字符串
+#     print("20")
 #     if not data:
 #         print(data,"datakong")
 #         break
@@ -46,8 +48,15 @@ sk.listen(100)
 while True:
     cli, addr = sk.accept()  # 等待连接(阻塞式),在连接到来之前会阻塞在这里
     print("Client Addr:", addr)
+
     while True:
-        data = cli.recv(1024)  # 该方法阻塞的。客户端结束，这里接收空字符串
+        print("18")
+        try:
+            data = cli.recv(1024)  # 该方法阻塞的。客户端结束，这里接收空字符串
+            # 客户端强制关闭，这里会报错
+        except socket.error as err:
+            break
+        print("20")
         if not data:
             print(data, "datakong")
             break
@@ -69,30 +78,33 @@ import threading
 HOST = '127.0.0.1'
 PORT = 3214
 
-
-
 def plus():
     try:
         sk = socket.socket()
-        sk.connect((HOST, PORT))  
+        sk.connect((HOST, PORT))
         #先执行该行的进程，靠前排队，直到该进程的socket断开连接，才下一进程。不阻塞，在服务器端才排队
-        #print("子线程%s:" % (threading.current_thread().getName())) #能体现多进程，一次性打印60行，因为上一行不阻塞
+        #可能第三个进程先运行
+        #进程强制关掉，连接请求在服务器端还是在排队。等排队好，响应请求时，服务器端会报错
+        print("子线程%s:" % (threading.current_thread().getName())) #能体现多进程，一次性打印60行，因为上一行不阻塞
         data = b"hello"
 
         for i in range(10):
             print("子线程%s运算结束后，number = %s" % (threading.current_thread().getName(), str(i)))
             # 能体现多进程，因为上一行不阻塞
 
-            # sk.sendall(str(i).encode())  
-            # 参数必为二进制类型,不能注定发送空字节，发了服务器端不会接受，但是客户端关闭连接，服务器端能接受空字节
+            # print(str(i), "12")
+            # sk.sendall(str(i).encode())  # 参数必为二进制类型,不能注定发送空字节，发了服务器端不会接受，但是客户端关闭连接，服务器端能接受空字节
+            # print(data, "14")
             # data = sk.recv(1024)  # 该方法阻塞的
+            # print(data, "16")
             # print("Recv data:", data)
             # temp = input('Please input message\n')
             # data = temp.encode()
 
-            time.sleep(10)
+            time.sleep(0.5)
             sk.sendall(str(i).encode()) #能体现多进程，因为sendall不阻塞
-            print("32") #第一次循环能体现多进程，打印60次，因为sendall不阻塞。但10秒之后不能，因为59个进程卡在下一行！！！
+            print("32") #第一次循环能体现多进程，打印60次，因为sendall不阻塞。但10秒之后一个一个打印，因为59个进程卡在下一行！！！
+            #最先执行sk.connect的进程最先循环
             data = sk.recv(1024)  # 该方法阻塞的
             print("Recv data:", data)
             time.sleep(0.1)
