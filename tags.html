@@ -1,70 +1,3087 @@
----
-title: Tags
-layout: default
-description: keep hungry keep foolish
-header-img: "img/tag-bg.jpg"
----
+<!doctype html>
+<html>
+    <head>
+   <link href="external/ui/jquery-ui.css" rel="stylesheet">	
+    
+    <style type="text/css">
+	#myCanvas {position:absolute;
+left:20px;
+top:10px;
+border:2px solid #c3c3c3;
+}
+#canvas1{
+overflow-style:scroll;
+overflow-x:hidden;
+border:2px solid #c3c3c3;
+}
+#canvas1 h2{
+margin-top:30px;
+text-align:left;
+font-size:12px;
+}
+.ui-widget{
+font: 80% "Trebuchet MS", sans-serif;
+}
+#conp {
+	margin-top: 10px;
+	font: 80% "Trebuchet MS", sans-serif;
+	text-align:left;
+}
+button{
+	margin-top: 5px;
+	margin-right: 5px;
+	margin-left: 5px;
+	
+}
+#claer_ph_bt{
 
-<!-- Page Header -->
-<header class="intro-header" style="background-image: url('{{ site.baseurl }}/{% if page.header-img %}{{ page.header-img }}{% else %}{{ site.header-img }}{% endif %}')">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
-                <div class="site-heading" id="tag-heading">
-                    <h1>{% if page.title %}{{ page.title }}{% else %}{{ site.title }}{% endif %}</h1>
-                    <span class="subheading">{{ page.description }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</header>
+	margin-left: 0px;
+}
+#test_div{
+text-align:left;
+}
+#ph_div_out{
+text-align:left;
+margin-top: 10px;
+margin-right: 5px;
+margin-left: 5px;
+font: 80% "Trebuchet MS", sans-serif;
+border-color:#ff0000;
 
-<!-- Main Content -->
-<div class="container">
-	<div class="row">
-		<div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
-            <!-- 标签云 -->
-			<div id='tag_cloud' class="tags">
-				{% for tag in site.tags %}
-				<a href="#{{ tag[0] }}" title="{{ tag[0] }}" rel="{{ tag[1].size }}">{{ tag[0] }}</a>
-				{% endfor %}
-			</div>
+}
+#ph_div_in{
+display:block; 
+text-align:left;
+word-break: break-all;
+word-wrap: break-word;
+overflow-style:scroll;
+overflow-x:hidden;
+font-size:14px;
+font-weight: normal;
+}
+.tong{
+color:#228B22;
+}
+.duan{
+color:red;
+}
+#ph_div_out button{
+	margin-top: 2px;
+	margin-down: 2px;
+}
+.del_bt{
+color:red;
+}
+.update_bt{
+color:green;
+}
+#canvas1 h2{
+margin-left: 5px;
+}
+		
+    </style>
+    <script type="text/javascript">
+	
+		var temparr;
+		var tempstr="";
+		var asd=0
+		var qwe=0//测试用 PLC（），stage不是每个扫描周期都update
+		var xxxxx=1;
+		var xxx=1;
+		var hastest=true;
 
-            <!--<blockquote class="tag-comments">
-                标签命名规范：
-                    <li>行业观察、职位、公司优先使用中文</li>
-                    <li>外国产品、术语优先使用英文</li>
-            </blockquote>-->
 
-            <!-- 标签列表 -->
-			{% for tag in site.tags %}
-			<div class="one-tag-list">
-			  	<span class="fa fa-tag listing-seperator" id="{{ tag[0] }}">
-                    <span class="tag-text">{{ tag[0] }}</span>
-                </span>
-				{% for post in tag[1] %}
-				  <!-- <li class="listing-item">
-				  <time datetime="{{ post.date | date:"%Y-%m-%d" }}">{{ post.date | date:"%Y-%m-%d" }}</time>
-				  <a href="{{ post.url }}" title="{{ post.title }}">{{ post.title }}</a>
-				  </li> -->
-				 <div class="post-preview">
-				    <a href="{{ post.url | prepend: site.baseurl }}">
-				        <h2 class="post-title">
-                            {{ post.title }}
-				        </h2>
-				        {% if post.subtitle %}
-				        <h3 class="post-subtitle">
-				            {{ post.subtitle }}
-				        </h3>
-				        {% endif %}
-				    </a>
-				    <!-- <p class="post-meta">{{ post.date | date:"%Y-%m-%d" }}</p> -->
-				</div>
-				<hr>
-				{% endfor %}
-			</div>
-			{% endfor %}
+	var bili=1;        //整个舞台shape的比例//整个舞台shape的比例
+	var roser=11*bili;//螺丝的半径
+	var xielv_1=0.7;
+	var xielv_2=3.5;
+	var stage;
+	var copspace;//元件间距
+	var control;//管理位置
+	var draging_x;//点击时鼠标的x
+	var draging_y;//点击时鼠标的y
+	var current_x;//点击时元件的x
+	var current_y;//点击时元件的y
+	var temp_line=0;//偶数开始接线，奇数结束接线
+	var start_rose=false;
+	var allline={};//所有接线 线名：线对象
+	var allcop={};//所有带 线圈元件元件名：元件对象
+	var allrose={}//所有的可接线螺丝
+	var copname={};
+	var linename=[];
+	//var temp_line_json={}//键是line名，值是[rose名，rose名]
+	var temp_rosename_number_json={};//键是rose名，值是temp_line_arr下标
+	var temp_line_arr=[];//元素是长度为2的数组[[多个rose名（等电位）],[多个line名]]，有的元素是false
+	var conp_height=550*bili;
+	var rose_spaceing=1.2*roser;//1*roser;
+	var rose_padinging=1*roser;//1*roser;
+	var stage_padding=90*bili;
+	var lineoffset=0.25*stage_padding;//接线槽中的线与layer_1距离
+	var timer;
+	var timer_time=40;//设置扫描周期ms
+	var kt_time=5;//kt 定时时间
+	var startplc;
+	var saomiaostartplc;
+	var FU2;
+	var QS;
+	//var tempcop;
+	var is_update=false;
+	var temp_startplc;
+	var islarge=false;//放大时拖动是换窗口位置，非放大时拖动时是拖动cop位置,0没有放大，
+	var largecounter=0;
+	var temp_stagex;
+	var temp_stagey;
+	var runtime;
+	var ph_temp_str="";
+	
+	var jxp_height=170*bili;//按钮高度
+	var canvas_height=5*stage_padding+2*conp_height+jxp_height+20*bili;
+	var canvas_width;
+	var layer_1=stage_padding;
+	var layer_2=stage_padding*2.5+conp_height;
+	var jxz_rect_h=2*roser+2*rose_padinging;
+	var jxz_up_down_h=conp_height-jxz_rect_h;
+	
+	var temp_line;
+	
+	function control_board(){
+	
+	
+		$("#canvas1").append($("<div class='ui-widget'><div class='ui-state-highlight ui-corner-all' style='padding: 0 .7em;'><p><span class='ui-icon ui-icon-info' style='float: left;'></span>V1.0.0 <strong>BY 上海科学技术职业学院 冷宇</strong></p></div></div>"));
+	
+		var add_h2=$("<h2>添加元件</h2>");
+		$("#canvas1").append(add_h2);
+	
+		var conp=$("<div id='conp'></div>");
+		var ka_bt=$("<button>KA +1</button>");
+		ka_bt.button().click(function(){
+			control.auto_postion(new ka(0,0));
+			stage.update();
+		});
+		var km_bt=$("<button>KM +1</button>");
+		km_bt.button().click(function(){
+			control.auto_postion(new km(0,0));
+			stage.update();
+		});
+		var kt_1_bt=$("<button>通电延时KT +1</button>");
+		kt_1_bt.button().click(function(){
+			control.auto_postion(new kt_1(0,0));
+			stage.update();
+		});
+		var kt_2_bt=$("<button>断电延时KT +1</button>");
+		kt_2_bt.button().click(function(){
+			control.auto_postion(new kt_2(0,0));
+			stage.update();
+		});
+		var bt_bt=$("<button class='del_bt'>删除所有接线</button>");
+		bt_bt.button().click(function(){
+			clearline();
+			stage.update();
+		});
+		var sq_bt=$("<button class='del_bt'>删除所有接线和元件</button>");
+		sq_bt.button().click(function(){
+			clearline();
+			clearconp();
+			stage.update();
+		});
+		var update_bt=$("<button class='update_bt'>版本更新</button>");
+		update_bt.button().click(function(){
+			window.open('http://yun.baidu.com/s/1qW2vws8');
+		});
+		
+		conp.append(ka_bt,km_bt,kt_1_bt,kt_2_bt,bt_bt,sq_bt,update_bt);  
+		$("#canvas1").append(conp);
+		
+		
+		var test_h2=$("<h2>测试接线</h2>");
+		$("#canvas1").append(test_h2);
+		var test_div=$("<div id='test_div'></div>");
+		var test1_bt=$("<button>测试1（双速电动机自动控制线路）</button>");
+		test1_bt.button().click(function(){
+			if(hastest){testline1();}
+		});
+		var test2_bt=$("<button>测试2（断电延时星三角启动线路）</button>");
+		test2_bt.button().click(function(){
+		if(hastest){testline2();}
+		});
+		test_div.append(test1_bt,test2_bt);  
+		$("#canvas1").append(test_div);
+		
+		
+		
+		var run_h2=$("<h2>运行过程</h2>");
+		$("#canvas1").append(run_h2);
+		var ph_div_in=$("<div id='ph_div_in' class='ui-state-default ui-corner-all'></div>");
+		
+		var claer_ph_bt=$("<button id='claer_ph_bt'>清除</button>");
+		claer_ph_bt.button().click(function(){
+			$("#ph_div_in").empty();
+			runtime=0;
+			$("#claer_ph_bt").hide();
+		});
+		
+		var ph_div_out=$("<div id='ph_div_out'></div>");
+		ph_div_out.append(ph_div_in,claer_ph_bt);
+		
+		$("#canvas1").append(ph_div_out);
+		$("#claer_ph_bt").hide();
+	}
+	function init(){
+	
+	document.documentElement.style.overflowY = 'hidden' ;
+	//document.documentElement.style.overflowX = 'hidden' ;
+		//$("#myCanvas").css({"postion":"absolute","left":"0px"});
+		var temp_canvas_height=canvas_height;
+		getcanvas_w_h();
+		var temp_canvas_width=canvas_width
+		canvas_width=temp_canvas_width*0.8;
+		bili=Math.floor(canvas_height*1000/temp_canvas_height)/1000;
+		document.getElementById("myCanvas").width=canvas_width;
+		document.getElementById("myCanvas").height=canvas_height;
+		
+		$("#canvas1").css({
+		"position":"absolute",
+		"top":"10px",
+		"left":(canvas_width+40)+"px"
+		});
+		
+		document.getElementById("canvas1").style.width=temp_canvas_width*0.2+"px";
+		document.getElementById("canvas1").style.height=canvas_height+"px";
+	
+		control_board();
+		
+		
+		
+	roser=11*bili//螺丝的半径
+	copspace=10*roser;//元件间距
+	conp_height=550*bili;
+	rose_spaceing=1.2*roser;//1*roser;
+	rose_padinging=1*roser;//1*roser;
+	stage_padding=90*bili;
+	lineoffset=0.25*stage_padding;//接线槽中的线与layer_1距离
+	jxp_height=170*bili;//按钮高度
+	//canvas_height=5*stage_padding+2*conp_height+jxp_height+20*bili;
+	//canvas_width=2000*bili;
+	layer_1=stage_padding;
+	layer_2=stage_padding*2.5+conp_height;
+	jxz_rect_h=2*roser+2*rose_padinging;
+	jxz_up_down_h=conp_height-jxz_rect_h;
+	
+	
+	/*if(document.addEventListener){ 
+		document.addEventListener('DOMMouseScroll',scrollFunc,false); 
+	}*/ 
+	document.onmousewheel=scrollFunc;//IE/Opera/Chrome 
+		
+		
+		
 
-		</div>
-	</div>
-</div>
+		stage = new createjs.Stage("myCanvas");
+		stage.enableMouseOver(10);
+		stage.x=0;
+		stage.y=0;
+		control = new control_system();
+		
+		
+		
+		stage.addEventListener("stagemousedown",drag_stage);
+		stage.addEventListener("stagemouseup",function(){
+			stage.removeEventListener("stagemousemove",pressmove_stage)
+		});
+		
+		
+		
+		QS=new QS(0,0)
+		control.auto_postion(QS);
+		
+		FU2=new fu2(0,0);
+		control.auto_postion(FU2);
+		
+		control.auto_postion(new fr(0,0));
+		
+		new jxp_bt(stage_padding,4*stage_padding+2*conp_height);
+		new bt("green",950*bili,4*stage_padding+2*conp_height);
+		new bt("black",1220*bili,4*stage_padding+2*conp_height);
+		new bt("red",1490*bili,4*stage_padding+2*conp_height);
+		
+		
+		
+		stage.update();
+	}
+	function getcopname(type){//删除元件时及时删除copname!
+		if(copname[type]){
+			for(var namei=1;namei<=copname[type].length+1;namei++){
+				if(!copname[type][namei-1]){
+					var name=type+namei;
+					copname[type][namei-1]=name;
+					break;
+				}
+			}
+		}else{var name=type+"1";copname[type]=[];copname[type].push(name);}
+		
+		return name;
+	}	
+ function scrollFunc(e){
+	if(!stage.mouseInBounds){return}
+    var direct=0; 
+	var step=0.5;
+    e=e || window.event; 
+     
+    if(e.wheelDelta){//IE/Opera/Chrome 
+        direct=e.wheelDelta; 
+    }else if(e.detail){//Firefox 
+        direct=e.detail; 
+    } 
+	
+	
+	var stage_x=(stage.mouseX-stage.x)/(1+largecounter*step);
+	var stage_y=(stage.mouseY-stage.y)/(1+largecounter*step);
+    
+	if(direct>0){
+		largecounter++;if(largecounter>9){largecounter=9}
+	}else{
+		largecounter--;if(largecounter<0){largecounter=0}
+	}
+	
+	if(largecounter==0){
+	islarge=false;
+	stage.scaleY=1;
+	stage.scaleX=1;
+	stage.x=0;
+	stage.y=0;
+	stage.update();
+	}else{
+	islarge=true;
+	stage.scaleY=1+largecounter*step;
+	stage.scaleX=1+largecounter*step;
+	stage.x=stage.mouseX-(1+largecounter*step)*stage_x;
+	stage.y=stage.mouseY-(1+largecounter*step)*stage_y;
+	stage.update();
+	}
+	
+} 	
+	function kt_1(x,y){//true通电延时，false<span class='duan'>断</span>电延时
+		this.type="KT";
+		var name =getcopname("KT");
+		this.name=name;//元件名字
+		this.x=x;//左上角x
+		this.y=y;//左上角y
+		this.shape={};//所含shape
+		allcop[name]=this;
+		this.is_line=cop_is_line;
+		this.candel=true;
+		
+		//内部常数
+		var jxz_rect_w=rose_padinging*2+2*4*roser+6*rose_spaceing;
+		var h1=jxz_rect_h;
+		var h2=(conp_height-jxz_rect_w)/2;
+		var h3=conp_height-h1;
+		var h4=h2+4*roser;
+		var h5=h2+jxz_rect_w-4*roser;
+		var h6=conp_height/2;
+		var w4=jxz_rect_w;
+		var w1=jxz_rect_w/2;
+		var w2=w4-2*roser;
+		var w3=w1-3*roser;
+		
+		//this.cop_w=body_x+w3+jxz_rect_w;
+		this.width=w4;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		
+		//所含shape
+		var temp=new createjs.Shape();
+		temp.type="body";
+		temp.x=x;
+		temp.y=y;
+		var g=temp.graphics;
+		
+		g.setStrokeStyle(3*bili);
+		g.beginFill("#ffffff");
+		g.beginStroke("#123dfe");
+		g.drawRect(0,0,w4,h1);
+		g.drawRect(0,h3,w4,h1);
+		g.beginStroke("black");
+		g.drawRect(0,h2,w4,w4+20*bili);
+		g.endStroke();
+		g.setStrokeStyle(3*bili);
+		g.beginStroke("#123dfe");
+		g.drawCircle(w1,h6+10*bili,w3+10*bili);//g_off.moveTo(w1+w2+w3+w4+w5,h1);g_off.lineTo(w1+w2+w3+w4,h1+0.2*h2);
+		g.endStroke();
+		g.setStrokeStyle(4*bili);
+		g.beginStroke("red");
+		for(var i=0;i<4;i++){
+			g.moveTo(rose_padinging+roser+i*(2*rose_spaceing+2*roser),h3+roser+rose_padinging);
+			g.lineTo(rose_padinging+roser+i*(2*rose_spaceing+2*roser),h2+w4+20*bili);
+		}
+		for(var i=0;i<4;i++){
+			g.moveTo(rose_padinging+roser+i*(2*rose_spaceing+2*roser),h1-roser-rose_padinging);
+			g.lineTo(rose_padinging+roser+i*(2*rose_spaceing+2*roser),h2);
+		}
+		
+		stage.addChild(temp);
+		this.shape.body=temp;
+		
+		var text_name = new createjs.Text(name, "15px 微软雅黑", "#000000");
+		text_name.x = w3;
+		text_name.y = conp_height/2-20*bili;
+		text_name.textBaseline = "top";
+		stage.addChild(text_name);
+		this.shape.text_name=text_name;
+		
+		/*var text_up = new createjs.Text("up", "10px 微软雅黑", "#000000");
+		text_up.x = w3+w1;
+		text_up.y = h2;
+		text_up.textBaseline = "top";
+		stage.addChild(text_up);
+		this.shape.text_up=text_up;*/
+		
+		for(var i=0;i<4;i++){
+			this.shape[name+"_up"+i]=rose(this.x+rose_padinging+roser+i*(2*rose_spaceing+2*roser),h1-roser-rose_padinging,true,name+"_up"+i,"up");
+		}
+		for(var i=0;i<4;i++){
+			this.shape[name+"_down"+i]=rose(this.x+rose_padinging+roser+i*(2*rose_spaceing+2*roser),h3+roser+rose_padinging,true,name+"_down"+i,"down");
+		}
+		
+		
+		var g_off = new createjs.Graphics();
+		g_off.setStrokeStyle(1*bili);
+		g_off.beginStroke("#000000");
+		g_off.beginFill("gray");
+		g_off.drawCircle(0,0,3);
+		this.g_off=g_off;
+		
+		var g_on = new createjs.Graphics();
+		g_on.setStrokeStyle(1*bili);
+		g_on.beginStroke("#000000");
+		g_on.beginFill("red");
+		g_on.drawCircle(0,0,3);
+		this.g_on=g_on;
+		
+		var g_down = new createjs.Graphics();
+		g_down.setStrokeStyle(1*bili);
+		g_down.beginStroke("#000000");
+		g_down.beginFill("gray");
+		g_down.drawCircle(0,0,3);
+		this.g_down=g_down;
+		
+		var g_up = new createjs.Graphics();
+		g_up.setStrokeStyle(1*bili);
+		g_up.beginStroke("#000000");
+		g_up.beginFill("red");
+		g_up.drawCircle(0,0,3);
+		this.g_up=g_up;
+		
+		
+		var on_off=new createjs.Shape();
+		on_off.x=this.x+w2;
+		on_off.y=this.y+h5+30*bili;
+		//on_off.type="click";
+		on_off.graphics=this.g_off;
+		stage.addChild(on_off);
+		this.shape.on_off=on_off;
+		
+		var up_down=new createjs.Shape();
+		up_down.x=this.x+w2;
+		up_down.y=this.y+h4-10*bili;
+		//on_off.type="click";
+		up_down.graphics=this.g_down;
+		stage.addChild(up_down);
+		this.shape.up_down=up_down;
+		
+		
+		for(var x in this.shape){
+		this.shape[x].component=this;//元件shape的component属性
+		if(this.shape[x].type=="body"){//jxz，kabody和部分rose的属性为body
+			this.shape[x].addEventListener("mousedown",drag);//拖动
+			this.shape[x].addEventListener("dblclick",bodydbclik);//双击删除元件
+			}else if(this.shape[x].type=="canline"){
+				this.shape[x].addEventListener("click",roseclik);//接线
+			}
+		}
+		
+		
+		//off时状态
+		this.start=[[name+"_up1",name+"_down1"],[name+"_up2",name+"_down2"]];
+		//on时状态
+		this.end=[[name+"_up0",name+"_down1"],[name+"_up3",name+"_down2"]];
+		
+		this.now=[[name+"_up1",name+"_down1"],[name+"_up2",name+"_down2"]];
+		
+		this.xq=[name+"_down0",name+"_down3"];
+		
+		this.time=0;
+		
+		//this.settimeout="time";
+		
+		this.temp_state=0;
+		this.isup=false;
+		
+		this.plc=function(){
+			if(is_xq_on(this.xq)){
+			if(!this.isup){
+			if(this.time){
+					if(this.temp_state!=2){
+					var d=new Date();
+					if(d.getTime()>this.time){
+						this.isup=true;
+						this.now=this.end;
+						this.shape.up_down.graphics=this.g_up;
+						this.shape.on_off.graphics=this.g_on;
+						this.temp_state=2;
+						is_update=true;
+						//$("#ph_ol").append($("<li>"+));
+						ph_temp_str=ph_temp_str+this.name+"定时时间到、";
+					}
+					}
+					
+				}else{
+					this.temp_state=1;
+					is_update=true;
+					var d=new Date();
+					this.time=d.getTime()+kt_time*1000;
+					this.now=this.start;
+					this.shape.up_down.graphics=this.g_down;
+					this.shape.on_off.graphics=this.g_on;
+					asd=d.getTime();
+					//$("#ph_ol").append($("<li>"+this.name+" 线圈<span class='tong'>通</span>电</li>"));
+					ph_temp_str=ph_temp_str+this.name+"线圈<span class='tong'>通</span>电、";
+				}
+			}
+				
+			}else{
+				if(this.temp_state!=0){
+				is_update=true;
+				this.temp_state=0;
+				this.isup=false;
+				this.time=0;
+				this.now=this.start;
+				this.shape.up_down.graphics=this.g_down;
+				this.shape.on_off.graphics=this.g_off;
+				//$("#ph_ol").append($("<li>"+));
+				ph_temp_str=ph_temp_str+this.name+"线圈<span class='duan'>断</span>电、";
+				}
+			}
+		}
+
+	}
+	
+	function kt_2(x,y){//true通电延时，false<span class='duan'>断</span>电延时
+		this.type="KT";
+		var name =getcopname("KT");
+		this.name=name;//元件名字
+		this.x=x;//左上角x
+		this.y=y;//左上角y
+		this.shape={};//所含shape
+		allcop[name]=this;
+		this.is_line=cop_is_line;
+		this.candel=true;
+		
+		//内部常数
+		var jxz_rect_w=rose_padinging*2+2*4*roser+6*rose_spaceing;
+		var h1=jxz_rect_h;
+		var h2=(conp_height-jxz_rect_w)/2;
+		var h3=conp_height-h1;
+		var h4=h2+4*roser;
+		var h5=h2+jxz_rect_w-4*roser;
+		var h6=conp_height/2;
+		var w4=jxz_rect_w;
+		var w1=jxz_rect_w/2;
+		var w2=w4-2*roser;
+		var w3=w1-3*roser;
+		
+		//this.cop_w=body_x+w3+jxz_rect_w;
+		this.width=w4;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		
+		//所含shape
+		var temp=new createjs.Shape();
+		temp.type="body";
+		temp.x=x;
+		temp.y=y;
+		var g=temp.graphics;
+		
+		g.setStrokeStyle(3*bili);
+		g.beginFill("#ffffff");
+		g.beginStroke("#123dfe");
+		g.drawRect(0,0,w4,h1);
+		g.drawRect(0,h3,w4,h1);
+		g.beginStroke("black");
+		g.drawRect(0,h2,w4,w4+20*bili);
+		g.endStroke();
+		g.setStrokeStyle(3*bili);
+		g.beginStroke("#123dfe");
+		g.drawCircle(w1,h6+10*bili,w3+10*bili);//g_off.moveTo(w1+w2+w3+w4+w5,h1);g_off.lineTo(w1+w2+w3+w4,h1+0.2*h2);
+		g.endStroke();
+		g.setStrokeStyle(4*bili);
+		g.beginStroke("red");
+		for(var i=0;i<4;i++){
+			g.moveTo(rose_padinging+roser+i*(2*rose_spaceing+2*roser),h3+roser+rose_padinging);
+			g.lineTo(rose_padinging+roser+i*(2*rose_spaceing+2*roser),h2+w4+20*bili);
+		}
+		for(var i=0;i<4;i++){
+			g.moveTo(rose_padinging+roser+i*(2*rose_spaceing+2*roser),h1-roser-rose_padinging);
+			g.lineTo(rose_padinging+roser+i*(2*rose_spaceing+2*roser),h2);
+		}
+		
+		stage.addChild(temp);
+		this.shape.body=temp;
+		
+		var text_name = new createjs.Text(name, "15px 微软雅黑", "#000000");
+		text_name.x = w3;
+		text_name.y = conp_height/2-20*bili;
+		text_name.textBaseline = "top";
+		stage.addChild(text_name);
+		this.shape.text_name=text_name;
+		
+		/*var text_up = new createjs.Text("up", "10px 微软雅黑", "#000000");
+		text_up.x = w3+w1;
+		text_up.y = h2;
+		text_up.textBaseline = "top";
+		stage.addChild(text_up);
+		this.shape.text_up=text_up;*/
+		
+		for(var i=0;i<4;i++){
+			this.shape[name+"_up"+i]=rose(this.x+rose_padinging+roser+i*(2*rose_spaceing+2*roser),h1-roser-rose_padinging,true,name+"_up"+i,"up");
+		}
+		for(var i=0;i<4;i++){
+			this.shape[name+"_down"+i]=rose(this.x+rose_padinging+roser+i*(2*rose_spaceing+2*roser),h3+roser+rose_padinging,true,name+"_down"+i,"down");
+		}
+		
+		
+		var g_off = new createjs.Graphics();
+		g_off.setStrokeStyle(1*bili);
+		g_off.beginStroke("#000000");
+		g_off.beginFill("gray");
+		g_off.drawCircle(0,0,3);
+		this.g_off=g_off;
+		
+		var g_on = new createjs.Graphics();
+		g_on.setStrokeStyle(1*bili);
+		g_on.beginStroke("#000000");
+		g_on.beginFill("red");
+		g_on.drawCircle(0,0,3);
+		this.g_on=g_on;
+		
+		/*var g_down = new createjs.Graphics();
+		g_down.setStrokeStyle(1*bili);
+		g_down.beginStroke("#000000");
+		g_down.beginFill("gray");
+		g_down.drawCircle(0,0,3);
+		this.g_down=g_down;
+		
+		var g_up = new createjs.Graphics();
+		g_up.setStrokeStyle(1*bili);
+		g_up.beginStroke("#000000");
+		g_up.beginFill("red");
+		g_up.drawCircle(0,0,3);
+		this.g_up=g_up;*/
+		
+		
+		var on_off=new createjs.Shape();
+		on_off.x=this.x+w2;
+		on_off.y=this.y+h5+30*bili;
+		//on_off.type="click";
+		on_off.graphics=this.g_off;
+		stage.addChild(on_off);
+		this.shape.on_off=on_off;
+		
+		/*var up_down=new createjs.Shape();
+		up_down.x=this.x+w2;
+		up_down.y=this.y+h4;
+		//on_off.type="click";
+		up_down.graphics=this.g_down;
+		stage.addChild(up_down);
+		this.shape.up_down=up_down;*/
+		
+		
+		for(var x in this.shape){
+		this.shape[x].component=this;//元件shape的component属性
+		if(this.shape[x].type=="body"){//jxz，kabody和部分rose的属性为body
+			this.shape[x].addEventListener("mousedown",drag);//拖动
+			this.shape[x].addEventListener("dblclick",bodydbclik);//双击删除元件
+			}else if(this.shape[x].type=="canline"){
+				this.shape[x].addEventListener("click",roseclik);//接线
+			}
+		}
+		
+		
+		//off时状态
+		this.start=[[name+"_up1",name+"_down1"]];
+		//on时状态
+		this.end=[[name+"_up0",name+"_down1"]];
+		
+		this.now=[[name+"_up1",name+"_down1"]];
+		
+		this.xq=[name+"_down0",name+"_down3"];
+		
+		
+		//this.settimeout="time";
+		this.istime=0;
+		this.temp_state=0;
+		this.istimeover=false;
+		this.settime;
+		
+		this.plc=function(){
+			if(is_xq_on(this.xq)){
+			if(this.temp_state!=1){
+				if(this.temp_state==2){clearTimeout(this.settime);}
+				this.temp_state=1;
+				is_update=true;
+				this.shape.on_off.graphics=this.g_on;
+				this.now=this.end;
+				this.istime=0;
+				
+				//$("#ph_ol").append($("<li>"+));
+				ph_temp_str=ph_temp_str+this.name+"线圈<span class='tong'>通</span>电、";
+			}
+				
+			}else{
+				if(this.temp_state!=0){
+				if(this.istime){
+					if(this.temp_state!=0){
+						var d=new Date();
+						if(d.getTime()>this.istime){
+						this.now=this.start;
+						this.temp_state=0;
+						//$("#ph_ol").append($("<li>"+));
+						ph_temp_str=ph_temp_str+this.name+"定时时间到、";
+					}
+					}
+				
+				}else{
+					this.temp_state=2;
+					is_update=true;
+					var d=new Date();
+					this.istime=d.getTime()+kt_time*1000;
+					this.shape.on_off.graphics=this.g_off;
+					//$("#ph_ol").append($("<li>"+"));
+					ph_temp_str=ph_temp_str+this.name+"线圈<span class='duan'>断</span>电、";
+				}
+				}
+				
+			}
+		}
+		
+		
+		
+		/*this.plc1=function(){
+			if(is_xq_on(this.xq)){
+			if(!this.isup){
+			if(this.time){
+					var d=new Date();
+					if(d.getTime()>this.time){
+						if(this.temp_state!=2){
+						this.isup=true;
+						this.now=this.end;
+						this.shape.up_down.graphics=this.g_up;
+						this.shape.on_off.graphics=this.g_on;
+						this.temp_state=2;
+						is_update=true;
+						}
+						
+					}else{console.log(d.getTime()-asd);asd=d.getTime();}
+				}else{
+					this.temp_state=1;
+					is_update=true;
+					this.now=this.start;
+					this.shape.up_down.graphics=this.g_down;
+					this.shape.on_off.graphics=this.g_on;
+					asd=d.getTime();
+				}
+			}
+				
+			}else{
+				if(this.temp_state!=0){is_update=true;this.temp_state=0;
+				this.isup=false;
+				this.time=0;
+				this.now=this.start;
+				this.shape.up_down.graphics=this.g_down;
+				this.shape.on_off.graphics=this.g_off;}
+			}
+		}*/
+
+	}
+	
+	function ka(x,y){
+		this.type="KA";
+		var name =getcopname("KA");
+		this.name=name;//元件名字
+		this.x=x;//左上角x
+		this.y=y;//左上角y
+		this.shape={};//所含shape
+		this.ispower=false;//是否dedian
+		//this.istimeover=false;//是否计时结束
+		allcop[name]=this;
+		//this.canmove=true;//能不能移动，双击删除。不需要了
+		this.is_line=cop_is_line;
+		this.candel=true;
+		
+		//内部常数
+		var jxz_rect_w=rose_padinging*2+2*8*roser+7*rose_spaceing;
+		var body_x=10*bili;
+		var body_y=82*bili;
+		var jxz_up_x=30*bili;
+		var w1=2*roser;
+		var h1=w1*xielv_1;
+		var w2=3*roser;
+		var h2=h1+(w2-w1)*xielv_2;
+		var w3=4*roser;
+		var h3=h2+(w3-w2)*xielv_2;
+		var body_h=2*h3+0.7*jxz_rect_w;
+		
+		//this.cop_w=body_x+w3+jxz_rect_w;
+		this.width=body_x+jxz_rect_w+w3;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		
+		//所含shape
+		this.shape.up_jxz=jxz(this.x,this.y,jxz_rect_w,jxz_rect_h);
+		this.shape.down_jxz=jxz(this.x+jxz_up_x,this.y+jxz_up_down_h,jxz_rect_w,jxz_rect_h);
+		
+		this.shape["body_xq_up"]=rose(this.x+body_x+w1+8*bili,this.y+body_y+h1+7*bili+roser);
+		
+		this.shape.body=ka_body(this.x+body_x,this.y+body_y,jxz_rect_w,w1,w2,w3,h1,h2,h3,body_h);
+		
+		this.shape["body_xq_d"]=rose(this.x+body_x+w1+jxz_rect_w-1.5*roser,this.y+body_y+body_h-h1-7*bili-roser)
+		
+		for(var i=0;i<8;i++){
+			this.shape[name+"up_jxz_rose"+i]=rose(this.x+rose_padinging+roser+(2*roser+rose_spaceing)*i,this.y+rose_padinging+roser,true,name+"up_jxz_rose"+i,"up")//能接线的螺丝带name
+		}
+		for(var i=0;i<8;i++){
+			this.shape[name+"down_jxz_rose"+i]=rose(this.x+rose_padinging+roser+(2*roser+rose_spaceing)*i+jxz_up_x,this.y+rose_padinging+roser+jxz_up_down_h,true,name+"down_jxz_rose"+i,"down")//能接线的螺丝带name
+		}
+		for(var i=0;i<4;i++){
+			this.shape["body_o_u"+i]=rose(this.x+body_x+w1+10*bili+2*roser+rose_spaceing+i*(4*roser+2*rose_spaceing),this.y+body_y+h2+8*bili+roser)//器身上不接线的螺丝
+		}
+		for(var i=0;i<4;i++){
+			this.shape["body_c_u"+i]=rose(this.x+body_x+w1+10*bili+4*roser+2*rose_spaceing+i*(4*roser+2*rose_spaceing),this.y+body_y+h3+8*bili+roser)//器身上不接线的螺丝
+		}
+		for(var i=0;i<4;i++){
+			this.shape["body_c_d"+i]=rose(this.x+body_x+w1+10*bili+4*roser+2*rose_spaceing+i*(4*roser+2*rose_spaceing),this.y+body_y+body_h-h3-8*bili-roser)//器身上不接线的螺丝
+		}
+		for(var i=0;i<4;i++){
+			this.shape["body_o_d"+i]=rose(this.x+body_x+w1+10*bili+2*roser+rose_spaceing+i*(4*roser+2*rose_spaceing),this.y+body_y+body_h-h2-8*bili-roser)//器身上不接线的螺丝
+		}
+		for(var i=0;i<4;i++){
+		this.shape["up_jxz_rose"+(1+2*i)+"to"+"body_o_u"+i]=jxz_body_line(this.shape[name+"up_jxz_rose"+(1+2*i)],this.shape["body_o_u"+i],false,true);//器身上螺丝到接线柱导线
+		}
+		for(var i=0;i<3;i++){
+		this.shape["up_jxz_rose"+(2+2*i)+"to"+"body_c_u"+i]=jxz_body_line(this.shape[name+"up_jxz_rose"+(2+2*i)],this.shape["body_c_u"+i],false,true);//器身上螺丝到接线柱导线
+		}
+		
+		for(var i=0;i<4;i++){
+		this.shape["down_jxz_rose"+(2*i)+"to"+"body_o_d"+i]=jxz_body_line(this.shape[name+"down_jxz_rose"+(2*i)],this.shape["body_o_d"+i],false,false);//器身上螺丝到接线柱导线
+		}
+		
+		for(var i=0;i<3;i++){
+		this.shape["down_jxz_rose"+(1+2*i)+"to"+"body_c_d"+i]=jxz_body_line(this.shape[name+"down_jxz_rose"+(1+2*i)],this.shape["body_c_d"+i],false,false);//器身上螺丝到接线柱导线
+		}
+		
+		this.shape["up_jxz_rose0"+"to"+"body_xq_up"]=jxz_body_line(this.shape[name+"up_jxz_rose0"],this.shape["body_xq_up"],false,true);//器身上螺丝到接线柱导线
+		
+		this.shape["down_jxz_rose7"+"to"+"body_xq_d"]=jxz_body_line(this.shape[name+"down_jxz_rose7"],this.shape["body_xq_d"],false,false);//器身上螺丝到接线柱导线
+		
+		
+		var text_name = new createjs.Text(name, "15px 微软雅黑", "#000000");
+		text_name.x = w3+0.6*jxz_rect_w;
+		text_name.y = body_h/2+body_y;
+		text_name.textBaseline = "Alphabetic";
+		stage.addChild(text_name);
+		this.shape.text_name=text_name;
+		
+		var temp=1.3;
+		var c_w1=1.1*roser;
+		var c_w2=3*roser;
+		var c_w3=3.6*roser;
+		var c_h1=4*roser;
+		var c_h2=4.9*roser;
+		var c_h3=c_h1+c_w1*temp-c_h2;
+		var c_h4=c_h2-c_h1;
+		var c_w4=c_h4/temp;
+		
+		
+		var g_off = new createjs.Graphics();
+		g_off.setStrokeStyle(2*bili);
+		g_off.beginStroke("#000000");
+		g_off.beginFill("#ffffff");
+		//g_off.rect(0,0,c_w3,c_h2);
+		//g_off.rect(c_w1,-1*c_h3,c_w2,c_h1);
+		g_off.moveTo(c_w1,-1*c_h3);
+		g_off.lineTo(c_w1+c_w2,-1*c_h3);
+		g_off.lineTo(c_w1+c_w2,c_h1-c_h3);
+		g_off.lineTo(c_w1,c_h1-c_h3);
+		g_off.lineTo(c_w1,-1*c_h3);
+		g_off.moveTo(c_w1,-1*c_h3);
+		g_off.lineTo(c_w1,c_h1-c_h3);
+		g_off.lineTo(0,c_h2);
+		g_off.lineTo(0,c_h4);
+		g_off.lineTo(c_w1,-1*c_h3);
+		g_off.moveTo(c_w1,c_h1-c_h3);
+		g_off.lineTo(c_w2+c_w1,c_h1-c_h3);
+		g_off.lineTo(c_w2,c_h2);
+		g_off.lineTo(0,c_h2);
+		g_off.lineTo(c_w1,c_h1-c_h3);
+		g_off.moveTo(0,0);
+		g_off.lineTo(0,c_h4);
+		g_off.moveTo(0,0);
+		g_off.lineTo(c_w4,0);
+		g_off.moveTo(c_w3,c_h2);
+		g_off.lineTo(c_w3,c_h2-(c_w3-c_w2)*temp);
+		g_off.moveTo(c_w3,c_h2);
+		g_off.lineTo(c_w2,c_h2);
+		
+		this.g_off=g_off;
+		
+		c_w1=0.3*roser;
+		c_w2=3*roser;
+		c_w3=3.5*roser;
+		c_h1=4*roser;
+		c_h2=5*roser;
+		c_h3=c_h1+c_w1*temp-c_h2;
+		c_h4=c_h2-c_h1;
+		c_w4=c_h4/temp;
+		g_on = new createjs.Graphics();
+		g_on.setStrokeStyle(2*bili);
+		g_on.beginStroke("#000000");
+		g_on.beginFill("#ffffff");
+		//g_on.rect(0,0,c_w3,c_h2);
+		//g_on.rect(c_w1,-1*c_h3,c_w2,c_h1);
+		g_on.moveTo(c_w1,-1*c_h3);
+		g_on.lineTo(c_w1+c_w2,-1*c_h3);
+		g_on.lineTo(c_w1+c_w2,c_h1-c_h3);
+		g_on.lineTo(c_w1,c_h1-c_h3);
+		g_on.lineTo(c_w1,-1*c_h3);
+		g_on.moveTo(c_w1,-1*c_h3);
+		g_on.lineTo(c_w1,c_h1-c_h3);
+		g_on.lineTo(0,c_h2);
+		g_on.lineTo(0,c_h4);
+		g_on.lineTo(c_w1,-1*c_h3);
+		g_on.moveTo(c_w1,c_h1-c_h3);
+		g_on.lineTo(c_w2+c_w1,c_h1-c_h3);
+		g_on.lineTo(c_w2,c_h2);
+		g_on.lineTo(0,c_h2);
+		g_on.lineTo(c_w1,c_h1-c_h3);
+		g_on.rect(0,0,c_w3,c_h2);
+		
+		this.g_on=g_on;
+		
+		var on_off=new createjs.Shape();
+		on_off.x=10*roser;
+		on_off.y=h3+body_y+7*roser;
+		//on_off.type="click";
+		on_off.graphics=this.g_off;
+		stage.addChild(on_off);
+		this.shape.on_off=on_off;
+		
+		
+		
+		
+		
+		for(var x in this.shape){
+		this.shape[x].component=this;//元件shape的component属性
+		if(this.shape[x].type=="body"){//jxz，kabody和部分rose的属性为body
+			this.shape[x].addEventListener("mousedown",drag);//拖动
+			this.shape[x].addEventListener("dblclick",bodydbclik);//双击删除元件
+			}else if(this.shape[x].type=="canline"){
+				this.shape[x].addEventListener("click",roseclik);//接线
+			}
+		}
+		
+		
+		//off时状态
+		this.start=[[name+"up_jxz_rose2",name+"down_jxz_rose1"],[name+"up_jxz_rose4",name+"down_jxz_rose3"],[name+"up_jxz_rose6",name+"down_jxz_rose5"]];
+		//on时状态
+		this.end=[[name+"up_jxz_rose1",name+"down_jxz_rose0"],[name+"up_jxz_rose3",name+"down_jxz_rose2"],[name+"up_jxz_rose5",name+"down_jxz_rose4"],[name+"up_jxz_rose7",name+"down_jxz_rose6"]];
+		
+		this.now=[[name+"up_jxz_rose2",name+"down_jxz_rose1"],[name+"up_jxz_rose4",name+"down_jxz_rose3"],[name+"up_jxz_rose6",name+"down_jxz_rose5"]];
+		
+		this.xq=[name+"up_jxz_rose0",name+"down_jxz_rose7"];
+		
+		this.temp_state=0;
+		
+		this.plc=function(){
+			if(is_xq_on(this.xq)){
+			if(this.temp_state==0){
+				this.now=[[this.name+"up_jxz_rose1",this.name+"down_jxz_rose0"],[this.name+"up_jxz_rose3",this.name+"down_jxz_rose2"],[this.name+"up_jxz_rose5",this.name+"down_jxz_rose4"],[this.name+"up_jxz_rose7",this.name+"down_jxz_rose6"]];
+				this.shape.on_off.graphics=this.g_on;
+				is_update=true;
+				this.temp_state=1;
+				//$("#ph_ol").append($("<li>"+));
+				ph_temp_str=ph_temp_str+this.name+"线圈<span class='tong'>通</span>电、";
+			}
+				
+			}else{
+				if(this.temp_state==1){
+				this.now=[[this.name+"up_jxz_rose2",this.name+"down_jxz_rose1"],[this.name+"up_jxz_rose4",this.name+"down_jxz_rose3"],[this.name+"up_jxz_rose6",this.name+"down_jxz_rose5"]];
+				this.shape.on_off.graphics=this.g_off;
+				is_update=true;
+				this.temp_state=0;
+				//$("#ph_ol").append($("<li>"+));
+				ph_temp_str=ph_temp_str+this.name+"线圈<span class='duan'>断</span>电、";
+				}
+				
+			}
+		}
+
+	}
+	
+	function km(x,y){
+		this.type="KM";
+		var name =getcopname("KM");
+		this.name=name;//元件名字
+		this.x=x;//左上角x
+		this.y=y;//左上角y
+		this.shape={};//所含shape
+		this.ispower=false;//是否dedian
+		//this.istimeover=false;//是否计时结束
+		allcop[name]=this;
+		//this.canmove=true;//能不能移动，双击删除。不需要了
+		this.is_line=cop_is_line;
+		this.candel=true;
+		
+		//内部常数
+		var jxz_rect_w=rose_padinging*2+2*8*roser+7*rose_spaceing;
+		var body_x=0;
+		var body_y=82*bili;
+		var jxz_up_x=30*bili;
+		var w1=2*roser;
+		var h1=w1*xielv_1;
+		var w2=3*roser;
+		var h2=h1+(w2-w1)*xielv_2;
+		var w3=4*roser;
+		var h3=h2+(w3-w2)*xielv_2;
+		var body_h=2*h3+0.7*jxz_rect_w;
+		
+		//this.cop_w=body_x+w3+jxz_rect_w;
+		this.width=70*bili-rose_padinging-10*bili+jxz_rect_w;//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		
+		//所含shape
+		this.shape.up_jxz=jxz(35*bili-rose_padinging-10*bili+this.x,this.y,jxz_rect_w,jxz_rect_h);
+		this.shape.down_jxz=jxz(53*bili-rose_padinging-10*bili+this.x,this.y+jxz_up_down_h,jxz_rect_w,jxz_rect_h);
+		
+		this.shape["body_xq_up"]=rose(this.x+body_x+w1+8*bili,this.y+body_y+h1+7*bili+roser);
+		
+		this.shape.body=ka_body(this.x+body_x,this.y+body_y,jxz_rect_w,w1,w2,w3,h1,h2,h3,body_h);
+		
+		this.shape["body_xq_d"]=rose(this.x+body_x+w1+jxz_rect_w-3*roser,this.y+body_y+body_h-h1-7*bili-roser)
+		
+		for(var i=0;i<5;i++){
+			this.shape[name+"up_jxz_rose"+i]=rose(25*bili+this.x+rose_padinging+roser+(4*roser+rose_spaceing)*i,this.y+rose_padinging+roser,true,name+"up_jxz_rose"+i,"up")//能接线的螺丝带name
+		}
+		for(var i=0;i<5;i++){
+			this.shape[name+"down_jxz_rose"+i]=rose(40*bili+this.x+rose_padinging+roser+(4*roser+rose_spaceing)*i,this.y+rose_padinging+roser+jxz_up_down_h,true,name+"down_jxz_rose"+i,"down")//能接线的螺丝带name
+		}
+		for(var i=0;i<3;i++){
+			this.shape["body_o_u"+i]=rose(this.x+body_x+w1+10*bili+2*roser+rose_spaceing+i*(4*roser+2*rose_spaceing),this.y+body_y+h2+8*bili+roser)//器身上不接线的螺丝
+		}
+		for(var i=0;i<4;i++){
+			this.shape["body_c_u"+i]=rose(this.x+body_x+w1+4*roser+2*rose_spaceing+i*(4*roser+2*rose_spaceing),this.y+body_y+h3+8*bili+roser)//器身上不接线的螺丝
+		}
+		for(var i=0;i<4;i++){
+			this.shape["body_c_d"+i]=rose(this.x+body_x+w1+4*roser+2*rose_spaceing+i*(4*roser+2*rose_spaceing),this.y+body_y+body_h-h3-8*bili-roser)//器身上不接线的螺丝
+		}
+		for(var i=0;i<3;i++){
+			this.shape["body_o_d"+i]=rose(this.x+body_x+w1+10*bili+2*roser+rose_spaceing+i*(4*roser+2*rose_spaceing),this.y+body_y+body_h-h2-8*bili-roser)//器身上不接线的螺丝
+		}
+		/*for(var i=0;i<4;i++){
+		this.shape["up_jxz_rose"+(1+2*i)+"to"+"body_o_u"+i]=jxz_body_line(this.shape[name+"up_jxz_rose"+(1+2*i)],this.shape["body_o_u"+i],false,true);//器身上螺丝到接线柱导线
+		}*/
+		for(var i=0;i<4;i++){
+		this.shape["up_jxz_rose"+(1+i)+"to"+"body_c_u"+i]=jxz_body_line(this.shape[name+"up_jxz_rose"+(1+i)],this.shape["body_c_u"+i],false,true);//器身上螺丝到接线柱导线
+		}
+		
+		/*for(var i=0;i<4;i++){
+		this.shape["down_jxz_rose"+(2*i)+"to"+"body_o_d"+i]=jxz_body_line(this.shape[name+"down_jxz_rose"+(2*i)],this.shape["body_o_d"+i],false,false);//器身上螺丝到接线柱导线
+		}*/
+		
+		for(var i=0;i<4;i++){
+		this.shape["down_jxz_rose"+i+"to"+"body_c_d"+i]=jxz_body_line(this.shape[name+"down_jxz_rose"+i],this.shape["body_c_d"+i],false,false);//器身上螺丝到接线柱导线
+		}
+		
+		this.shape["up_jxz_rose0"+"to"+"body_xq_up"]=jxz_body_line(this.shape[name+"up_jxz_rose0"],this.shape["body_xq_up"],false,true);//器身上螺丝到接线柱导线
+		
+		this.shape["down_jxz_rose4"+"to"+"body_xq_d"]=jxz_body_line(this.shape[name+"down_jxz_rose4"],this.shape["body_xq_d"],false,false);//器身上螺丝到接线柱导线
+		
+		
+		var text_name = new createjs.Text(name, "15px 微软雅黑", "#000000");
+		text_name.x = w3+0.6*jxz_rect_w;
+		text_name.y = body_h/2+body_y;
+		text_name.textBaseline = "Alphabetic";
+		stage.addChild(text_name);
+		this.shape.text_name=text_name;
+		
+		var temp=1.3;
+		var c_w1=1.1*roser;
+		var c_w2=3*roser;
+		var c_w3=3.6*roser;
+		var c_h1=4*roser;
+		var c_h2=4.9*roser;
+		var c_h3=c_h1+c_w1*temp-c_h2;
+		var c_h4=c_h2-c_h1;
+		var c_w4=c_h4/temp;
+		
+		
+		var g_off = new createjs.Graphics();
+		g_off.setStrokeStyle(2*bili);
+		g_off.beginStroke("#000000");
+		g_off.beginFill("#ffffff");
+		//g_off.rect(0,0,c_w3,c_h2);
+		//g_off.rect(c_w1,-1*c_h3,c_w2,c_h1);
+		g_off.moveTo(c_w1,-1*c_h3);
+		g_off.lineTo(c_w1+c_w2,-1*c_h3);
+		g_off.lineTo(c_w1+c_w2,c_h1-c_h3);
+		g_off.lineTo(c_w1,c_h1-c_h3);
+		g_off.lineTo(c_w1,-1*c_h3);
+		g_off.moveTo(c_w1,-1*c_h3);
+		g_off.lineTo(c_w1,c_h1-c_h3);
+		g_off.lineTo(0,c_h2);
+		g_off.lineTo(0,c_h4);
+		g_off.lineTo(c_w1,-1*c_h3);
+		g_off.moveTo(c_w1,c_h1-c_h3);
+		g_off.lineTo(c_w2+c_w1,c_h1-c_h3);
+		g_off.lineTo(c_w2,c_h2);
+		g_off.lineTo(0,c_h2);
+		g_off.lineTo(c_w1,c_h1-c_h3);
+		g_off.moveTo(0,0);
+		g_off.lineTo(0,c_h4);
+		g_off.moveTo(0,0);
+		g_off.lineTo(c_w4,0);
+		g_off.moveTo(c_w3,c_h2);
+		g_off.lineTo(c_w3,c_h2-(c_w3-c_w2)*temp);
+		g_off.moveTo(c_w3,c_h2);
+		g_off.lineTo(c_w2,c_h2);
+		
+		this.g_off=g_off;
+		
+		c_w1=0.3*roser;
+		c_w2=3*roser;
+		c_w3=3.5*roser;
+		c_h1=4*roser;
+		c_h2=5*roser;
+		c_h3=c_h1+c_w1*temp-c_h2;
+		c_h4=c_h2-c_h1;
+		c_w4=c_h4/temp;
+		g_on = new createjs.Graphics();
+		g_on.setStrokeStyle(2*bili);
+		g_on.beginStroke("#000000");
+		g_on.beginFill("#ffffff");
+		//g_on.rect(0,0,c_w3,c_h2);
+		//g_on.rect(c_w1,-1*c_h3,c_w2,c_h1);
+		g_on.moveTo(c_w1,-1*c_h3);
+		g_on.lineTo(c_w1+c_w2,-1*c_h3);
+		g_on.lineTo(c_w1+c_w2,c_h1-c_h3);
+		g_on.lineTo(c_w1,c_h1-c_h3);
+		g_on.lineTo(c_w1,-1*c_h3);
+		g_on.moveTo(c_w1,-1*c_h3);
+		g_on.lineTo(c_w1,c_h1-c_h3);
+		g_on.lineTo(0,c_h2);
+		g_on.lineTo(0,c_h4);
+		g_on.lineTo(c_w1,-1*c_h3);
+		g_on.moveTo(c_w1,c_h1-c_h3);
+		g_on.lineTo(c_w2+c_w1,c_h1-c_h3);
+		g_on.lineTo(c_w2,c_h2);
+		g_on.lineTo(0,c_h2);
+		g_on.lineTo(c_w1,c_h1-c_h3);
+		g_on.rect(0,0,c_w3,c_h2);
+		
+		this.g_on=g_on;
+		
+		var on_off=new createjs.Shape();
+		on_off.x=10*roser;
+		on_off.y=h3+body_y+7*roser;
+		//on_off.type="click";
+		on_off.graphics=this.g_off;
+		stage.addChild(on_off);
+		this.shape.on_off=on_off;
+		
+		
+		
+		
+		
+		for(var x in this.shape){
+		this.shape[x].component=this;//元件shape的component属性
+		if(this.shape[x].type=="body"){//jxz，kabody和部分rose的属性为body
+			this.shape[x].addEventListener("mousedown",drag);//拖动
+			this.shape[x].addEventListener("dblclick",bodydbclik);//双击删除元件
+			}else if(this.shape[x].type=="canline"){
+				this.shape[x].addEventListener("click",roseclik);//接线
+			}
+		}
+		
+		
+		//off时状态
+		this.start=[[name+"up_jxz_rose2",name+"down_jxz_rose1"],[name+"up_jxz_rose3",name+"down_jxz_rose2"]];
+		//on时状态
+		this.end=[[name+"up_jxz_rose1",name+"down_jxz_rose0"],[name+"up_jxz_rose4",name+"down_jxz_rose3"]];
+		
+		this.now=[[name+"up_jxz_rose2",name+"down_jxz_rose1"],[name+"up_jxz_rose3",name+"down_jxz_rose2"]];
+		
+		this.xq=[name+"up_jxz_rose0",name+"down_jxz_rose4"];
+		
+		this.temp_state=0;
+		
+		this.plc=function(){
+			if(is_xq_on(this.xq)){
+			if(this.temp_state==0){
+				this.now=[[name+"up_jxz_rose1",name+"down_jxz_rose0"],[name+"up_jxz_rose4",name+"down_jxz_rose3"]];
+				this.shape.on_off.graphics=this.g_on;
+				is_update=true;
+				this.temp_state=1;
+				
+				//$("#ph_ol").append($("<li>"+));
+				ph_temp_str=ph_temp_str+this.name+"线圈<span class='tong'>通</span>电、";
+			}
+				
+			}else{
+				if(this.temp_state==1){
+				this.now=[[name+"up_jxz_rose2",name+"down_jxz_rose1"],[name+"up_jxz_rose3",name+"down_jxz_rose2"]];
+				this.shape.on_off.graphics=this.g_off;
+				is_update=true;
+				this.temp_state=0;
+				
+				//$("#ph_ol").append($("<li>"+));
+				ph_temp_str=ph_temp_str+this.name+"线圈<span class='duan'>断</span>电、";
+				}
+				
+			}
+		}
+
+	}
+	
+	function resetclickrose(){
+		temp_line=0;
+		if(start_rose){
+		start_rose.scaleY=1;
+		start_rose.scaleX=1;
+		}
+	}
+	function cop_is_line(){//元件是否接线，双击删除和拖动时用
+			var temp=false;
+			for(x in this.shape){
+			if(this.shape[x].type=="canline"){
+				if(this.shape[x].line[0]==1||this.shape[x].line[1]==1){temp=true;break;}
+			}
+			}
+			return temp;
+		}
+	function jxz(x,y,w,h){
+		var temp=new createjs.Shape();
+		var g=temp.graphics;
+		g.setStrokeStyle(3*bili);
+		g.beginFill("#ffffff");
+		g.beginStroke("#123dfe");
+		g.drawRect(x, y, w, h);
+		temp.type="body";
+		stage.addChild(temp);
+		return temp;
+	}	
+	function rose(x,y,canline,name,postion){
+		var temp=new createjs.Shape();
+		var g=temp.graphics;
+		
+		g.setStrokeStyle(4*bili);	
+		g.beginStroke("#6493af");
+		g.beginFill("#ffffff");
+		g.drawCircle(0, 0, roser);
+		g.setStrokeStyle(3*bili);
+		g.beginStroke("#b0b7ac");
+		g.moveTo(-roser*0.8,0);
+		g.lineTo(+roser*0.8,0);
+		g.moveTo(0,-roser*0.5);
+		g.lineTo(0,+roser*0.5);	
+		stage.addChild(temp);
+		temp.x=x;
+		temp.y=y;
+		
+		if(canline){
+			temp.updown=postion;//up或者down
+			temp.line=[0,0];//一颗螺丝最多接两根线
+			temp.type="canline";
+			temp.name=name;
+		temp.is_line=function(){//螺丝是否接线
+			if(this.line[0]!=0||this.line[1]!=0){return true}else{return false}
+		}
+		temp.is_allline=function(){//螺丝是否接了两根线
+			if(this.line[0]==1&&this.line[1]==1){return true}else{return false}
+		}
+		allrose[name]=temp;
+		}else{temp.type="body";}
+		
+		return temp;
+	}	
+	function ka_body(x,y,width,w1,w2,w3,h1,h2,h3,height){//shapex，shapey，宽
+
+		var temp=new createjs.Shape();
+		temp.x=x;
+		temp.y=y;
+		var g=temp.graphics;
+		g.setStrokeStyle(2*bili);
+		g.beginStroke("#000000");
+		g.moveTo(w2,height-h2);
+		g.lineTo(w1,height-h1);
+		g.lineTo(w1+width,height-h1);
+		g.lineTo(w2+width,height-h2);
+		g.lineTo(w2,height-h2);
+		
+		g.moveTo(w1,h1);
+		g.lineTo(w2,h2);
+		g.lineTo(width+w2,h2);
+		g.lineTo(width+w1,h1);
+		g.lineTo(w1,h1);
+		
+		g.moveTo(0,0);
+		g.lineTo(width,0);
+		g.lineTo(width+w1,h1);
+		g.lineTo(w1,h1);
+		g.lineTo(0,0);
+		
+		g.moveTo(w1,height-h1);
+		g.lineTo(0,height);
+		g.lineTo(width,height);
+		g.lineTo(w1+width,height-h1);
+		g.lineTo(w1,height-h1);
+		
+		g.beginFill("#ffffff");
+		
+
+		g.moveTo(w2,h2);
+		g.lineTo(w3,h3);
+		g.lineTo(width+w3,h3);
+		g.lineTo(width+w2,h2);
+		g.lineTo(w2,h2);
+		g.drawRect(w3, h3, width, 0.7*width);
+		g.moveTo(w3,height-h3);
+		g.lineTo(w2,height-h2);
+		g.lineTo(w2+width,height-h2);
+		g.lineTo(w3+width,height-h3);
+		g.lineTo(w3,height-h3);
+		g.moveTo(w3,height-h3);
+		g.lineTo(w2,height-h2);
+		g.lineTo(w2+width,height-h2);
+		g.lineTo(w3+width,height-h3);
+		g.lineTo(w3,height-h3);
+
+		
+		
+		g.moveTo(0,0);
+		g.lineTo(0,height);
+		g.lineTo(w1,height-h1);
+		g.lineTo(w3,height-h3);
+		g.lineTo(w3,h3);
+		g.lineTo(w1,h1);
+		g.lineTo(0,0);
+		g.moveTo(w1+width,h1);
+		g.lineTo(w1+width,h2);
+		g.moveTo(w2+width,h2);
+		g.lineTo(w2+width,h3);
+		g.moveTo(w2+width,height-h2);
+		g.lineTo(w2+width,height-h3);
+		g.moveTo(w1+width,height-h1);
+		g.lineTo(w1+width,height-h2);
+		
+		temp.type="body";
+		stage.addChild(temp);
+		return temp;
+	}
+	function jxz_body_line(jxz,body,islow,isup){
+ 		var temp_y=3.7*roser;
+		temp_y= isup ? temp_y : -1*temp_y ;
+		var temp=new createjs.Shape();
+		var g=temp.graphics;
+		g.setStrokeStyle(4*bili);
+		g.beginStroke("#ff0000");
+		
+		g.moveTo(jxz.x,jxz.y);
+		g.lineTo(jxz.x,jxz.y+temp_y);
+		g.lineTo(body.x,jxz.y+temp_y+(isup ? body.x-jxz.x :jxz.x-body.x)*xielv_1);
+		g.lineTo(body.x,body.y)
+		
+		stage.addChild(temp);
+		stage.setChildIndex(temp,(stage.getChildIndex(jxz)>stage.getChildIndex(body) ?stage.getChildIndex(body):stage.getChildIndex(jxz) ));
+		
+		temp.type="bodyline";
+		return temp;
+	}	
+	function drag (evt){
+	if(!islarge){
+		if(!evt.currentTarget.component.is_line()){
+			draging_x=evt.stageX;
+			draging_y=evt.stageY;			
+			current_x=evt.currentTarget.component.x;
+			current_y=evt.currentTarget.component.y;
+			evt.currentTarget.addEventListener("pressmove",pressmove);
+		}else{evt.currentTarget.removeAllEventListeners("pressmove");}
+	}
+
+	}	
+	function drag_stage (evt){
+	if(islarge){
+	//console.log(1);
+			temp_stagex=stage.x;
+			temp_stagey=stage.y;
+			draging_x=evt.stageX;
+			draging_y=evt.stageY;
+			stage.addEventListener("stagemousemove",pressmove_stage);
+	}
+	}	
+	function bodydbclik(evt){
+		var cop=evt.currentTarget.component;
+			if(!cop.is_line()){
+				resetclickrose()
+				delete_cop(cop);
+				stage.update();
+			}
+		 }
+	function roseclik(evt){
+	if(startplc){return;}
+			var rose=evt.currentTarget;
+			if(!rose.is_allline()){
+				if (temp_line%2==0){//这个螺丝可以开始接线	
+					//alert("开始接线");
+					temp_line++;
+					start_rose=rose;
+					rose.scaleY=2;
+					rose.scaleX=2;
+					
+				}else{//这个螺丝可以结束接线
+					temp_line++;
+					if(rose==start_rose){
+						//alert("点击同一点")
+					}else{
+						//alert("结束接线")
+						line(start_rose,rose);
+						//line(allcop.name.shape.name,allcop.name.shape.name);
+						tempstr=tempstr+"line(allcop."+start_rose.component.name+".shape."+start_rose.name+",allcop."+rose.component.name+".shape."+rose.name+");\n"
+						console.log(tempstr);
+						
+					}
+					start_rose.scaleY=1;
+					start_rose.scaleX=1;
+				}
+				/*
+				
+				for(x in allrose){
+					if(!allrosr[x].is_allline()&&x!=rose.name){//校验是否同一个螺丝没有连线
+						allrose[x].addEventListener("dblclick",bodydbclik);
+					}
+				}*/
+			}
+			
+			stage.update();
+		}	
+	function pressmove(evt){
+		if(!islarge){
+		var cop=evt.currentTarget.component;
+		var tempx=evt.stageX-draging_x+current_x;
+		var tempy=evt.stageY-draging_y+current_y;
+		
+		control.delete_position(cop);
+		var temp=control.can_postion(tempx,tempx+cop.width,tempy);
+		if(temp){
+			draw(cop,temp[0],temp[1]);
+			control.add_postion(cop);
+			stage.update();
+		}else{
+			control.add_postion(cop);
+		}
+		}
+		
+	}
+	function pressmove_stage(evt){
+		if(islarge){
+		//var cop=evt.currentTarget.component;
+		var tempx=evt.stageX-draging_x;
+		var tempy=evt.stageY-draging_y;
+		
+		stage.x=temp_stagex+tempx;
+		stage.y=temp_stagey+tempy;
+		//console.log(tempx+"  "+tempy);
+		stage.update();
+	}
+	}
+	function line(rose1,rose2,color){
+		var name =getlinename();
+		
+		
+		
+		var temp=new createjs.Shape();
+		temp.addEventListener("dblclick",linedbclik);
+		temp.addEventListener("mouseover",linemouseover);
+		temp.addEventListener("mouseout",linemouseout);
+		temp.name=name;
+		
+		rose_postion(rose1);
+		rose_postion(rose2);
+		allline[name]=temp;
+		temp.rose=[rose1.name,rose2.name];
+		
+		
+		if(rose1.postion==rose2.postion){
+			var style="centre";
+		}else if((rose1.postion==2&&rose2.postion==3)||(rose2.postion==2&&rose1.postion==3)||(rose1.postion==4&&rose2.postion==5)||(rose2.postion==4&&rose1.postion==5)){
+			var style="2-3";
+		}else if(rose1.x+rose2.x<canvas_width*2-rose1.x-rose2.x){
+			var style="left";
+		}else{var style="right";}
+		
+		if(rose1.line[0]==0&&rose1.line[1]==1){
+			rose1.lr=-1;rose1.line[0]=1;
+		}else if(rose1.line[1]==0&&rose1.line[0]==1){
+			rose1.lr=1;rose1.line[1]=1;
+		}else{
+			switch (style){
+				case "2-3":
+				case "centre":
+					if (rose1.x>rose2.x){
+						rose1.lr=-1;rose1.line[0]=1;
+					}else{rose1.lr=1;rose1.line[1]=1;}
+					break;
+				case "left":
+					rose1.lr=-1;rose1.line[0]=1;
+					break;
+				case "right":
+					rose1.lr=1;rose1.line[1]=1;
+					break;
+			}
+		}
+		
+		if(rose2.line[0]==0&&rose2.line[1]==1){
+			rose2.lr=-1;rose2.line[0]=1;
+		}else if(rose2.line[1]==0&&rose2.line[0]==1){
+			rose2.lr=1;rose2.line[1]=1;
+		}else{
+			switch (style){
+				case "2-3":
+				case "centre":
+					if (rose1.x>rose2.x){
+						rose2.lr=1;rose2.line[1]=1;
+					}else{rose2.lr=-1;rose2.line[0]=1;}
+					break;
+				case "left":
+					rose2.lr=-1;rose2.line[0]=1;
+					break;
+				case "right":
+					rose2.lr=1;rose2.line[1]=1;
+					break;
+			}
+		}
+		
+		temp.roselr={};//为了删除线时恢复rose的line属性
+		temp.roselr[rose1.name]=rose1.lr==1 ? true :false;
+		temp.roselr[rose2.name]=rose2.lr==1 ? true :false;
+		
+		line_offset();
+		
+		var g=temp.graphics;
+		g.setStrokeStyle(8*bili);
+		g.beginStroke("#ff0000");
+		
+		
+		
+		g.moveTo(rose1.x,rose1.y);
+		g.lineTo(rose1.x+rose1.lr*roser,rose1.y+rose1.ud*(roser+rose_padinging+5*bili));
+		if(rose1.component.type=="fixed"&&rose1.updown=="down"){
+			var point1x=rose1.x+rose1.lr*roser;
+			var point1y=rose1.y+rose1.ud*(4*stage_padding+2*conp_height+jxp_height-rose1.y+roser+rose_padinging);
+			g.lineTo(point1x,point1y);
+		}else{
+			var point1x=rose1.x+rose1.lr*roser;
+			var point1y=rose1.y+rose1.ud*(roser+rose_padinging+5*bili);
+		}
+		var point3x=point1x;
+		var point3y=point1y+rose1.ud*lineoffset;
+		g.lineTo(point3x,point3y);
+		
+		g.moveTo(rose2.x,rose2.y);
+		g.lineTo(rose2.x+rose2.lr*roser,rose2.y+rose2.ud*(roser+rose_padinging+5*bili));
+		if(rose2.component.type=="fixed"&&rose2.updown=="down"){
+			var point2x=rose2.x+rose2.lr*roser;
+			var point2y=rose2.y+rose2.ud*(4*stage_padding+2*conp_height+jxp_height-rose2.y+roser+rose_padinging);
+			g.lineTo(point2x,point2y);
+		}else{
+			var point2x=rose2.x+rose2.lr*roser;
+			var point2y=rose2.y+rose2.ud*(roser+rose_padinging+5*bili);
+		}
+		
+		var point4x=point2x;
+		var point4y=point2y+rose2.ud*lineoffset;
+		if(style!="2-3"){g.lineTo(point4x,point4y);}
+		
+		
+		switch (style){
+				case "2-3":
+					g.moveTo(point3x,point3y);
+					
+					g.lineTo(point2x,point3y);
+					
+					g.lineTo(point2x,point2y);
+					break;
+				case "centre":
+					g.moveTo(point3x,point3y);
+					
+					g.lineTo(point4x,point3y);
+	
+					break;
+				case "left":
+					g.moveTo(point3x,point3y);
+					g.lineTo(stage_padding-lineoffset,point3y);
+					g.lineTo(stage_padding-lineoffset,point4y);
+					g.lineTo(point4x,point4y);
+					
+					break;
+				case "right":
+					
+					g.moveTo(point3x,point3y);
+					g.lineTo(canvas_width-stage_padding+lineoffset,point3y);
+					g.lineTo(canvas_width-stage_padding+lineoffset,point4y);
+					g.lineTo(point4x,point4y);
+					break;
+			}
+		
+		
+		stage.addChild(temp);
+		stage.setChildIndex(rose1,stage.getChildIndex(temp));
+		stage.setChildIndex(rose2,stage.getChildIndex(temp));
+		//stage.setChildIndex(temp,(stage.getChildIndex(rose1)>stage.getChildIndex(rose2) ?stage.getChildIndex(rose2):stage.getChildIndex(rose1)));
+		//stage.setChildIndex(rose1.component.shape.up_jxz,0);
+		//stage.setChildIndex(rose1.component.shape.down_jxz,0);
+		//stage.setChildIndex(rose2.component.shape.down_jxz,0);
+		//stage.setChildIndex(rose2.component.shape.up_jxz,0);
+		
+		
+	}
+	function getlinename(){
+		if(linename.length!=0){
+			for(var namei=1;namei<=linename.length+1;namei++){
+				if(!linename[namei-1]){
+					var name="xian"+namei;
+					linename[namei-1]=name;
+					break;
+				}
+			}
+		}else{var name="xian1";linename[0]="xian1";}
+		
+		return name;		
+	}
+	function linedbclik(evt){
+		//linename删除
+		//allline删除
+		//stages删除
+		//rose的line属性恢复
+		if(startplc){return;}
+		var line=evt.currentTarget;		
+		for(x in line.roselr){
+			if(line.roselr[x]){
+				allrose[x].line[1]=0;
+			}else{allrose[x].line[0]=0;}
+		}
+		
+		delete allline[line.name];
+		
+		for(var i=0;i<linename.length;i++){
+			if(linename[i]==line.name){linename[i]=false;}
+		}
+		
+		stage.removeChild(line);
+		fresh_line();
+		stage.update();
+	}
+	function linemouseover(evt){
+		if(!startplc){
+		fresh_line();
+		temp_line=evt.currentTarget;	
+		//var temp_line_json//键是line名，值是[rose名，rose名]
+		//var temp_rosename_number_json;//键是rose名，值是temp_line_arr下标
+		//var temp_line_arr;//元素是长度为2的数组[[多个rose名（等电位）],[多个line]]，有的元素是false
+		for(var x= 0;x<temp_line_arr.length;x++){
+			if (temp_line_arr[x]&&x!=temp_rosename_number_json[temp_line.rose[0]]){
+			var arr=temp_line_arr[x][1];
+			for(var i=0;i<arr.length;i++){
+				alpha_line(arr[i]);
+			}
+			}
+			//temp_line.graphics.clear();
+			linedbclik(evt);
+
+			
+		}
+		stage.update();
+		}
+		
+		
+		
+	}
+	function linemouseout(evt){
+		if(!startplc){reset_line();stage.update();}
+	}
+	function rose_postion(rose){
+		/*if(rose.component.y==layer_1){			
+			if (rose.updown=="up"){rose.ud=-1;rose.postion=1;}else{rose.ud=1;rose.postion=2;}			
+		}else if(rose.component.y==layer_2){			
+			if (rose.updown=="up"){rose.ud=-1;rose.postion=3;}else{rose.ud=1;rose.postion=4;}			
+		}else if(rose.component.name=="jxp"){			
+			if (rose.updown=="up"){rose.ud=-1;rose.postion=5;}else{rose.ud=1;rose.postion=6;}			
+		}else if(rose.component.name=="button"){			
+				rose.ud=-1;rose.postion=6;}*/
+
+		if(rose.component.y==layer_1){
+			if (rose.updown=="up"){rose.ud=-1;rose.postion=1;}else{rose.ud=1;rose.postion=2;}
+		}else{
+			if(rose.component.y==layer_2){
+				if (rose.updown=="up"){rose.ud=-1;rose.postion=3;}else{rose.ud=1;rose.postion=4;}
+			}else{
+				if(rose.component.name=="jxp"){
+					if (rose.updown=="up"){rose.ud=-1;rose.postion=5;}else{rose.ud=1;rose.postion=6;}
+				}else{
+					if(rose.component.type1=="button"){
+						rose.ud=1;rose.postion=6;
+					}
+				}
+			}
+		}
+				
+	}		
+	function line_offset(){
+		lineoffset=lineoffset+0.11*stage_padding;
+		if (lineoffset>0.9*stage_padding){
+			lineoffset=lineoffset-0.65*stage_padding;
+		}
+	}	
+	function control_system(){
+		this.component={};//所有原件，增加，删除元件是要修改
+		this.available_position_up=[];//上牌占用位置，一个元件有两个数
+		this.available_position_down=[];//下排占用位置，一个元件有两个数
+		this.ispower=false;//是否通电
+		
+		this.delete_position=function(cop){//删除元件位置
+		if(cop.y==layer_1){
+			var arr=this.available_position_up
+		}else{
+			var arr=this.available_position_down
+		};
+			for(var i=0;2*i<arr.length;i++){
+				if(arr[2*i]==cop.x){
+					arr.splice(2*i,2);
+					break;
+				}
+			}
+		}
+		this.can_postion=function(x1,x2,y){//判断元件是否可放置，x1x2是元件的最左最右位置
+			if (y<(layer_1+layer_2)/2){
+				var arr=this.available_position_up;
+				var new_y= layer_1;
+			}else{
+				var arr=this.available_position_down;
+				var new_y= layer_2;
+			}
+			
+			if(x2>canvas_width-stage_padding||x1<stage_padding){
+				return false;
+			}else if(arr.length==0){
+				return [x1,new_y];
+			}else{
+				if (x2+copspace<arr[0]){return [x1,new_y];}
+				if (x1>arr[arr.length-1]+copspace){return [x1,new_y];}
+				if(arr.length==2){return false}else{
+					var value=false;
+					for(var i=1;i<arr.length/2;i++){
+					if(x1>arr[2*i-1]+copspace&&x2+copspace<arr[2*i]){value=[x1,new_y]}
+				}
+				return value;
+				}
+				
+			}
+	
+		}
+		
+		this.add_postion=function(cop){//可放置的基础上，将元件最新位置放到available_position_up，或available_position_down
+				if(cop.y==layer_1){var arr=this.available_position_up}else{var arr=this.available_position_down}
+				var x1=cop.x;
+				var x2=cop.x+cop.width;
+				if(arr.length==0){arr.push(x1,x2);return;}
+				if(x2<arr[0]){arr.splice(0,0,x1,x2);return;}
+				if(x1>arr[arr.length-1]) {arr.push(x1,x2);return;}
+				else{
+					for(var i=1;i<arr.length/2;i++){
+						if(x1>arr[2*i-1]&&x2<arr[2*i]){arr.splice(2*i,0,x1,x2);return;}
+					}
+				}
+			
+		}
+		
+		this.auto_postion=function(cop){
+			//自动查找空位置，设置元件新的x和y，元件所有shape的x和y
+			//更新位置数组
+			var value=false;
+			var arr=this.available_position_up;
+			if(arr.length==0){value= [stage_padding,layer_1]}
+			if(cop.x+cop.width+copspace<arr[0]){value= [stage_padding,layer_1]}
+			if(arr.length>2){
+				for(var i=1;i<arr.length/2;i++){
+				if(arr[2*i]-arr[2*i-1]>2*copspace+cop.width){value= [arr[2*i-1]+copspace,layer_1]}
+			}
+			}
+			if(canvas_width-stage_padding-arr[arr.length-1]>cop.width+copspace){value= [arr[arr.length-1]+copspace,layer_1]}
+			
+			if(value==false){
+			var arr=this.available_position_down;
+			if(arr.length==0){value= [stage_padding,layer_2]}
+			if(cop.x+cop.width+copspace<arr[0]){value= [stage_padding,layer_2]}
+			if(arr.length>2){
+				for(var i=1;i<arr.length/2;i++){
+				if(arr[2*i]-arr[2*i-1]>2*copspace+cop.width){value= [arr[2*i-1]+copspace,layer_2]}
+			}
+			}
+			if(canvas_width-stage_padding-arr[arr.length-1]>cop.width+copspace){value= [arr[arr.length-1]+copspace,layer_2]}
+			}
+			
+			if(value){
+				draw(cop,value[0],value[1]);
+				this.add_postion(cop);
+			}else{
+					//allcop删除
+					//stage移除除所有shape。。container.removeChild(child);
+					//名字删除，不继续占位
+				delete_cop(cop);
+				alert("没有足够空间！")
+			}
+		}
+	}	
+	function draw(cop,new_x,new_y){//cop是元件，新的x和y
+		var offsetx=cop.x-new_x;
+		var offsety=cop.y-new_y;
+		cop.x=new_x;
+		cop.y=new_y;
+		for(var temp in cop.shape){
+		cop.shape[temp].x=cop.shape[temp].x-offsetx;
+		cop.shape[temp].y=cop.shape[temp].y-offsety;
+		}
+	}
+	function alpha_line(line){
+		allline[line].alpha=0.1;
+	}
+	function reset_line(){
+		for (var x in allline){
+			allline[x].alpha=1;
+		}
+	}
+	function delete_cop(cop){
+		//先判断cop.is_line
+		//allcop删除
+		//stage移除除所有shape。。container.removeChild(child);
+		//名字删除，不继续占位
+		//位置数组删除
+		delete allcop[cop.name];
+		for(x in cop.shape){
+			stage.removeChild(cop.shape[x]);
+		}
+		if(copname.hasOwnProperty(cop.type)){
+		for(var i=0;i<copname[cop.type].length;i++){
+			if(copname[cop.type][i]==cop.name){copname[cop.type][i]=null;}
+		}}
+		control.delete_position(cop);
+	}
+	function fresh_line(){
+			//删掉线(完成后)要传整个temp_line_json刷新，添加线(完成后)只传{"xian122":[xxxx,xxx]}刷新	 
+			//碰触点时直接判断temp_line_arr，不用刷新
+			//删线，接线的时候执行！！！
+			//temp_line_json={};
+			temp_rosename_number_json={};
+			temp_line_arr=[];
+			
+			for(var x in allline){	
+			if(!(temp_rosename_number_json.hasOwnProperty(allline[x].rose[0]) ) && !(temp_rosename_number_json.hasOwnProperty(allline[x].rose[1]) )){
+				var j=temp_line_arr.push([allline[x].rose.concat(),[x]]);
+				temp_rosename_number_json[allline[x].rose[0]]=j-1;
+				temp_rosename_number_json[allline[x].rose[1]]=j-1;
+				//alert(temp_line_arr);
+				continue;
+			}
+			if(temp_rosename_number_json.hasOwnProperty(allline[x].rose[0])  && !(temp_rosename_number_json.hasOwnProperty(allline[x].rose[1]) )){
+				temp_line_arr[temp_rosename_number_json[allline[x].rose[0]]][0].push(allline[x].rose[1]);
+				temp_line_arr[temp_rosename_number_json[allline[x].rose[0]]][1].push(x);
+				temp_rosename_number_json[allline[x].rose[1]]=temp_rosename_number_json[allline[x].rose[0]];
+				//alert(temp_line_arr);
+				continue;
+			}
+			if(!(temp_rosename_number_json.hasOwnProperty(allline[x].rose[0]) ) && temp_rosename_number_json.hasOwnProperty(allline[x].rose[1]) ){
+				temp_line_arr[temp_rosename_number_json[allline[x].rose[1]]][0].push(allline[x].rose[0]);
+				temp_line_arr[temp_rosename_number_json[allline[x].rose[1]]][1].push(x);
+				temp_rosename_number_json[allline[x].rose[0]]=temp_rosename_number_json[allline[x].rose[1]];
+				continue;
+			}
+			if(temp_rosename_number_json.hasOwnProperty(allline[x].rose[0])  && temp_rosename_number_json.hasOwnProperty(allline[x].rose[0]) ){
+				if(temp_rosename_number_json[allline[x].rose[1]]==temp_rosename_number_json[allline[x].rose[0]]){
+					temp_line_arr[temp_rosename_number_json[allline[x].rose[1]]][1].push(x);
+				}else{
+					temp_line_arr[temp_rosename_number_json[allline[x].rose[0]]][1]=temp_line_arr[temp_rosename_number_json[allline[x].rose[0]]][1].concat(temp_line_arr[temp_rosename_number_json[allline[x].rose[1]]][1]);
+					temp_line_arr[temp_rosename_number_json[allline[x].rose[0]]][1].push(x);
+					temp_line_arr[temp_rosename_number_json[allline[x].rose[0]]][0]=temp_line_arr[temp_rosename_number_json[allline[x].rose[0]]][0].concat(temp_line_arr[temp_rosename_number_json[allline[x].rose[1]]][0]);
+					var temp=temp_rosename_number_json[allline[x].rose[1]];
+					for(var y =0;y<temp_line_arr[temp][0].length;y++){
+					temp_rosename_number_json[temp_line_arr[temp][0][y]]=temp_rosename_number_json[allline[x].rose[0]];
+				}
+				temp_line_arr[temp]=false;
+				}
+				continue;
+			}
+		 }
+		 
+		 }
+	function fresh_line_now(arr){
+			//在fresh_line（）后
+			temp_rosename_number_json={};
+			temp_line_arr=[];
+			
+			for(var i=0;i<arr.length;i++){	
+			if(!(temp_rosename_number_json.hasOwnProperty(arr[i][0]) ) && !(temp_rosename_number_json.hasOwnProperty(arr[i][1]) )){
+				var j=temp_line_arr.push(arr[i].concat());//数组是对象，日了狗！！！！！！！！不能直接arr[i]
+				temp_rosename_number_json[arr[i][0]]=j-1;
+				temp_rosename_number_json[arr[i][1]]=j-1;
+				continue;
+			}
+			if(temp_rosename_number_json.hasOwnProperty(arr[i][0])  && !(temp_rosename_number_json.hasOwnProperty(arr[i][1]) )){
+				temp_line_arr[temp_rosename_number_json[arr[i][0]]].push(arr[i][1]);
+				//temp_line_arr[temp_rosename_number_json[arr[i][0]]][1].push(x);
+				temp_rosename_number_json[arr[i][1]]=temp_rosename_number_json[arr[i][0]];
+				continue;
+			}
+			if(!(temp_rosename_number_json.hasOwnProperty(arr[i][0]) ) && temp_rosename_number_json.hasOwnProperty(arr[i][1]) ){
+				temp_line_arr[temp_rosename_number_json[arr[i][1]]].push(arr[i][0]);
+				//temp_line_arr[temp_rosename_number_json[arr[i][1]]][1].push(x);
+				temp_rosename_number_json[arr[i][0]]=temp_rosename_number_json[arr[i][1]];
+				continue;
+			}
+			if(temp_rosename_number_json.hasOwnProperty(arr[i][0])  && temp_rosename_number_json.hasOwnProperty(arr[i][0]) ){
+				if(temp_rosename_number_json[arr[i][1]]!=temp_rosename_number_json[arr[i][0]]){
+					//temp_line_arr[temp_rosename_number_json[arr[i][0]]][1]=temp_line_arr[temp_rosename_number_json[arr[i][0]]][1].concat(temp_line_arr[temp_rosename_number_json[arr[i][1]]][1]);
+					//temp_line_arr[temp_rosename_number_json[arr[i][0]]][1].push(x);
+					temp_line_arr[temp_rosename_number_json[arr[i][0]]]=temp_line_arr[temp_rosename_number_json[arr[i][0]]].concat(temp_line_arr[temp_rosename_number_json[arr[i][1]]]);
+					var temp=temp_rosename_number_json[arr[i][1]];
+					for(var y =0;y<temp_line_arr[temp].length;y++){
+					temp_rosename_number_json[temp_line_arr[temp][y]]=temp_rosename_number_json[arr[i][0]];
+					}
+				temp_line_arr[temp]=false;
+				}
+				continue;
+			}
+		 }
+		 
+		 } 
+	function jxp_bt(x,y){
+		this.type="fixed";
+		this.name="jxp";
+		allcop[this.name]=this;
+		this.shape={};
+		this.candel=false;
+		
+		var temp=new createjs.Shape();
+		temp.x=x;
+		temp.y=y;
+		var g=temp.graphics;
+		
+		
+		g.setStrokeStyle(4*bili);
+		g.beginStroke("#000000");
+		g.moveTo(0,0);
+		g.lineTo(793*bili,0);
+		g.moveTo(0,87*bili);
+		g.lineTo(793*bili,87*bili);
+		g.moveTo(0,45*bili);
+		g.lineTo(793*bili,45*bili);
+		for(var i=0;i<21;i++){
+			g.moveTo(3.6*roser*i,87*bili);
+			g.lineTo(3.6*roser*i,0);
+		}
+		
+		stage.addChild(temp);	
+		this.now=[];
+		
+		for(var i=0;i<20;i++){
+			var name = "jxp_up"+i;
+			this.shape[name]=rose(x+1.8*roser+3.6*roser*i,y+2*roser,true,name,"up")
+			this.now.push([name]);
+		}
+		for(var i=0;i<20;i++){
+			var name = "jxp_down"+i;
+			this.shape[name]=rose(x+1.8*roser+3.6*roser*i,y+6*roser,true,name,"down")
+			this.now[i].push(name);
+		}
+		
+		
+		
+		
+		for(var x in this.shape){
+		this.shape[x].component=this;//元件shape的component属性
+		if(this.shape[x].type=="canline"){
+				this.shape[x].addEventListener("click",roseclik);//接线
+			}
+		}
+		
+
+	}	
+	function bt(color,x,y){//实现双击长按按钮，再双击松开
+		this.type="fixed";
+		this.type1="button";//很有用
+		this.counter=0;
+		var name =getcopname("SB");
+		this.name=name;
+		allcop[name]=this;
+		this.shape={};
+		this.candel=false;
+	
+		var body=new createjs.Shape();
+		body.x=x;
+		body.y=y;
+		var g=body.graphics;
+		
+		var h1=3*10*bili;
+		var h2=3.5*10*bili;
+		var h3=1.5*10*bili;
+		var h4=0.8*10*bili;
+		var h5=0.8*10*bili;
+		var h6=2*10*bili;
+		var w1=10*bili;
+		var w2=3.4*10*bili;
+		var w3=2*10*bili;
+		var w4=2.5*10*bili;
+		var w5=1.5*10*bili;
+		var w6=1.5*10*bili;
+		
+		g.setStrokeStyle(4*bili);
+		g.beginStroke("#000000");
+		g.setStrokeDash([10*bili,5*bili]);
+		g.drawRect(w1+w2+w3,h1+h2,2*(w4+w5)+w6,2*(h3+h4)+h4+4*h5+h6);
+		g.setStrokeDash();
+		
+		//4个
+		g.drawRect(w1,h1+h2+h3,w2+w3+w4,h4);
+		g.drawRect(w1+w2,h1+h2+h3+2*h4+4*h5+h6,w3+w4,h4);
+		g.drawRect(w1+w2+w3+w4+2*w5+w6,h1+h2+h3,w2+w3+w4,h4);
+		g.drawRect(w1+w2+w3+w4+2*w5+w6,h1+h2+h3+2*h4+4*h5+h6,w3+w4,h4);
+		g.endStroke();
+		//静触点
+		g.beginStroke("#000000");
+		g.arc(w1+w2+w3+w4-h5,h1+h2+h3+h4,h5,0,Math.PI);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.arc(w1+w2+w3+w4+2*w5+w6+h5,h1+h2+h3+h4,h5,0,Math.PI);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.arc(w1+w2+w3+w4-h5,h1+h2+h3+2*h4+4*h5+h6,h5,Math.PI,Math.PI*2);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.arc(w1+w2+w3+w4+2*w5+w6+h5,h1+h2+h3+2*h4+4*h5+h6,h5,Math.PI,Math.PI*2);
+		g.endStroke();
+		
+		
+		stage.addChild(body);
+		
+		
+		var g_off = new createjs.Graphics();
+		g_off.setStrokeStyle(4*bili);
+		g_off.beginStroke("#000000");
+		g_off.beginFill(color);
+		g_off.drawRect(w1+w2+w3+w4,0,2*w5+w5,h1);
+		g_off.beginFill();
+		//两个
+		g_off.drawRect(w1+w2+w3+w4+w5,h1,w6,h2+h3+h4+2*h5);
+		g_off.drawRect(w1+w2+w3+w4-2*h5,h1+h2+h3+h4+2*h5,w6+2*w5+4*h5,h4);
+		//动触点
+		g_off.beginStroke("#000000");
+		g_off.arc(w1+w2+w3+w4-h5,h1+h2+h3+h4+2*h5,h5,Math.PI,Math.PI*2);
+		g_off.endStroke();
+		g_off.beginStroke("#000000");
+		g_off.arc(w1+w2+w3+w4+2*w5+w6+h5,h1+h2+h3+h4+2*h5,h5,Math.PI,Math.PI*2);
+		g_off.endStroke();
+		g_off.beginStroke("#000000");
+		g_off.arc(w1+w2+w3+w4-h5,h1+h2+h3+2*h4+2*h5,h5,0,Math.PI);
+		g_off.endStroke();
+		g_off.beginStroke("#000000");
+		g_off.arc(w1+w2+w3+w4+2*w5+w6+h5,h1+h2+h3+2*h4+2*h5,h5,0,Math.PI);
+		g_off.endStroke();
+		//弹簧
+		g_off.beginStroke("#000000");
+		g_off.setStrokeStyle(2*bili);
+		g_off.moveTo(w1+w2+w3+w4+w5,h1);
+		g_off.lineTo(w1+w2+w3+w4,h1+0.2*h2);
+		g_off.lineTo(w1+w2+w3+w4+2*w5+w6,h1+0.4*h2);
+		g_off.lineTo(w1+w2+w3+w4,h1+0.6*h2);
+		g_off.lineTo(w1+w2+w3+w4+2*w5+w6,h1+0.8*h2);
+		g_off.lineTo(w1+w2+w3+w4+w5+w6,h1+h2);
+		
+		this.g_off=g_off;
+		
+		var g_on = new createjs.Graphics();
+		g_on.setStrokeStyle(4*bili);
+		g_on.beginStroke("#000000");
+		g_on.beginFill(color);
+		g_on.drawRect(w1+w2+w3+w4,h6,2*w5+w5,h1);
+		g_on.beginFill();
+		//两个
+		g_on.drawRect(w1+w2+w3+w4+w5,h1+h6,w6,h2+h3+h4+2*h5);
+		g_on.drawRect(w1+w2+w3+w4-2*h5,h1+h2+h3+h4+2*h5+h6,w6+2*w5+4*h5,h4);
+		//动触点
+		g_on.beginStroke("#000000");
+		g_on.arc(w1+w2+w3+w4-h5,h1+h2+h3+h4+2*h5+h6,h5,Math.PI,Math.PI*2);
+		g_on.endStroke();
+		g_on.beginStroke("#000000");
+		g_on.arc(w1+w2+w3+w4+2*w5+w6+h5,h1+h2+h3+h4+2*h5+h6,h5,Math.PI,Math.PI*2);
+		g_on.endStroke();
+		g_on.beginStroke("#000000");
+		g_on.arc(w1+w2+w3+w4-h5,h1+h2+h3+2*h4+2*h5+h6,h5,0,Math.PI);
+		g_on.endStroke();
+		g_on.beginStroke("#000000");
+		g_on.arc(w1+w2+w3+w4+2*w5+w6+h5,h1+h2+h3+2*h4+2*h5+h6,h5,0,Math.PI);
+		g_on.endStroke();
+		//弹簧
+		g_on.beginStroke("#000000");
+		g_on.setStrokeStyle(2*bili);
+		g_on.moveTo(w1+w2+w3+w4+w5,h1+h6);
+		g_on.lineTo(w1+w2+w3+w4,h1+h6+0.2*(h2-h6));
+		g_on.lineTo(w1+w2+w3+w4+2*w5+w6,h1+h6+0.4*(h2-h6));
+		g_on.lineTo(w1+w2+w3+w4,h1+h6+0.6*(h2-h6));
+		g_on.lineTo(w1+w2+w3+w4+2*w5+w6,h1+h6+0.8*(h2-h6));
+		g_on.lineTo(w1+w2+w3+w4+w5+w6,h1+h2);
+		
+		this.g_on=g_on;
+		
+		var on_off=new createjs.Shape();
+		on_off.x=x;
+		on_off.y=y;
+		on_off.type="click";
+		on_off.graphics=this.g_off;
+		stage.addChild(on_off);
+		this.shape.on_off=on_off;
+
+		this.shape[this.name+color+"_c_0"]=rose(x+w1,y+h1+h2+h3+h4*0.5,true,this.name+color+"_c_0","down");
+		this.shape[this.name+color+"_c_1"]=rose(x+w1+w6+2*(w2+w3+w4+w5),y+h1+h2+h3+h4*0.5,true,this.name+color+"_c_1","down");
+		this.shape[this.name+color+"_o_0"]=rose(x+w1+w2,y+h1+h2+h3+h4*2.5+4*h5+h6,true,this.name+color+"_o_0","down");
+		this.shape[this.name+color+"_o_1"]=rose(x+w1+w6+w2+2*(w3+w4+w5),y+h1+h2+h3+h4*2.5+4*h5+h6,true,this.name+color+"_o_1","down");
+		
+		
+		this.start=[[this.name+color+"_c_0",this.name+color+"_c_1"]];
+		this.end=[[this.name+color+"_o_0",this.name+color+"_o_1"]];
+		this.now=this.start;
+		
+		for(var x in this.shape){
+		this.shape[x].component=this;//元件shape的component属性
+		if(this.shape[x].type=="canline"){
+			this.shape[x].addEventListener("click",roseclik);//接线
+		}else if(this.shape[x].type=="click"){			
+				this.shape[x].addEventListener("mousedown",function(evt){
+					var cop=evt.currentTarget.component;
+					cop.counter=1;
+					//if(cop.counter%2){
+						//this.now=this.end;
+						if(!startplc){
+						cop.shape.on_off.graphics=cop.g_on;stage.update();}
+					//}else{
+						
+					//}
+
+				
+				});
+				this.shape[x].addEventListener("click",function(evt){
+					var cop=evt.currentTarget.component;
+					cop.counter=0;
+					//this.now=this.start;
+						if(!startplc){
+						cop.shape.on_off.graphics=cop.g_off;stage.update();}
+				
+				});
+		}
+		}
+		
+		this.temp_state=0;
+		
+		this.color=color=="green"?"绿色":(color=="red"?"红色":"黑色");
+		
+		this.plc=function(){
+			if(this.counter){
+						if(this.temp_state==0){
+						is_update=true;
+						this.shape.on_off.graphics=this.g_on;
+						this.now=this.end;
+						this.temp_state=1;
+						//$("#ph_ol").append($());
+						ph_temp_str=ph_temp_str+"点击"+this.color+"按钮、";
+						}
+						
+					}else{
+						if(this.temp_state==1){
+						is_update=true;
+						this.shape.on_off.graphics=this.g_off;
+						this.now=this.start;
+						this.temp_state=0;
+						//$("#ph_ol").append($());
+						//ph_temp_str=ph_temp_str+"松开"+this.color+"按钮、";
+						}
+					}
+		}
+	}
+	function fu2(x,y){
+	
+		var t1=15*bili;
+		var t2=8*bili;
+		var t3=65*bili;
+		var t4=10*bili;
+		var t5=8*bili;
+		var t6=140*bili;
+		var t7=6*bili;
+		var t8=3*bili;
+		var t9=80*bili;
+		var t10=30*bili;
+		var t11=40*bili;
+		var x1=t1;
+		var x2=x1+t4;
+		var x3=x1+t3;
+		var x4=x3+t4;
+		var x5=2*t3;
+		var x6=x5+t1;
+		var x7=x6+t4;
+		var x8=x1+0.5*t3;
+		var x9=x3+0.5*t3;
+		var x10=x8-t1-rose_padinging-2*roser;
+		var y0=110*bili;
+		var y1=y0+t2;
+		var y2=y1+t9;
+		var y3=y2+t5;
+		var y4=y3+t6;
+		var y5=y4-t8;
+		var y6=y5+t9;
+		var y7=y6-t7;
+		var y8=jxz_up_down_h;
+	
+		this.type="fu2";
+		this.name="FU2";
+		allcop[this.name]=this;
+		this.x=x;
+		this.y=y;
+		this.width=x7;
+		this.shape={};
+		this.is_line=cop_is_line;
+		this.candel=false;
+		
+		var temp=new createjs.Shape();
+		temp.type="body";
+		temp.x=x;
+		temp.y=y;
+		var g=temp.graphics;
+		
+		g.setStrokeStyle(3*bili);
+		g.beginFill("#ffffff");
+		g.beginStroke("#123dfe");
+		g.drawRect(x10,y8,t3+4*roser+2*rose_padinging,jxz_rect_h);
+		
+		g.beginFill("#ffffff");
+		g.setStrokeStyle(4*bili);
+		g.beginStroke("#000000");
+		g.moveTo(0,y0);
+		g.lineTo(x1,y1);
+		g.lineTo(x1,y2);
+		g.lineTo(x2,y3);
+		g.lineTo(x2,y4);
+		g.lineTo(x1,y5);
+		g.lineTo(x1,y6);
+		g.lineTo(0,y7);
+		g.lineTo(0,y0);
+		g.drawRect(x1,y1,2*t3,t9);
+		g.drawRect(x2,y3,2*t3,t6);
+		g.moveTo(0,y0);
+		g.lineTo(x5,y0);
+		g.lineTo(x6,y1);
+		g.moveTo(x6,y2);
+		g.lineTo(x7,y3);
+		g.moveTo(x6,y4);
+		g.lineTo(x6,y6);
+		g.lineTo(x1,y6);
+		g.moveTo(t3,y0);
+		g.lineTo(x3,y1);
+		g.lineTo(x3,y2);
+		g.lineTo(x4,y3);
+		g.lineTo(x4,y4);
+		g.moveTo(x3,y4);
+		g.lineTo(x3,y6);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x8,y1+t10,1.1*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x9,y1+t10,1.1*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x9,y6-t10,1.1*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x8,y6-t10,1.1*roser);
+		g.endStroke();
+		g.setStrokeStyle(8*bili);
+		g.beginStroke("#ffc125");
+		g.moveTo(x8,y1);
+		g.lineTo(x8,y1-t11);
+		g.lineTo(x8-t1,y1-t11-t2);
+		g.moveTo(x8,y6);
+		g.lineTo(x8,y6+t11);
+		g.lineTo(x8-t1,y6+t11-t7);
+		g.lineTo(x8-t1,y8+roser+rose_padinging);
+		g.beginStroke("red");
+		g.moveTo(x9,y1);
+		g.lineTo(x9,y1-t11);
+		g.lineTo(x9-t1,y1-t11-t2);
+		g.moveTo(x9,y6);
+		g.lineTo(x9,y6+t11);
+		g.lineTo(x9-t1,y6+t11-t7);
+		g.lineTo(x9-t1,y8+roser+rose_padinging);
+		
+		
+		stage.addChild(temp);
+		this.shape.body=temp;
+		
+		var text_name = new createjs.Text(this.name, "10px 微软雅黑", "#000000");
+		text_name.x = x2+5*bili;
+		text_name.y = y3+5*bili;
+		text_name.textBaseline = "top";
+		stage.addChild(text_name);
+		this.shape.text_name=text_name;
+		
+		this.shape.fu2_leftrose=rose(this.x+x10+2*roser+rose_padinging,this.y+rose_padinging+roser+jxz_up_down_h,true,"fu2_leftrose","down");
+		this.shape.fu2_rightrose=rose(this.x+x10+t3+2*roser+rose_padinging,this.y+rose_padinging+roser+jxz_up_down_h,true,"fu2_rightrose","down");
+		
+		for(var x in this.shape){
+		this.shape[x].component=this;//元件shape的component属性
+		if(this.shape[x].type=="body"){//jxz，kabody和部分rose的属性为body
+			this.shape[x].addEventListener("mousedown",drag);//拖动
+			//this.shape[x].addEventListener("dblclick",bodydbclik);//双击删除元件
+			}else if(this.shape[x].type=="canline"){
+				this.shape[x].addEventListener("click",roseclik);//接线
+			}
+		}
+	}	
+	
+	function fr(x,y){
+	
+		var t1=150*bili;
+		var t2=80*bili;
+		var t3=15*bili;
+		var t4=200*bili;
+		var t5=25*bili;
+		var t6=40*bili;
+		var t7=40*bili;
+		var t8=75*bili;
+		var t9=30*bili;
+		
+		var t10=30*bili;
+		var t11=t6+40*bili;
+		var t12=110*bili;
+		
+		
+		var x1=t5;
+		var x2=t6;
+		var x3=t4;
+		var x4=x3+t5;
+		var x5=x3+t6;
+		var x7=x5-t9;
+		var x6=x7-t8;
+		
+		var x8=x6-t11;
+		var x9=x7-t11+20*bili;
+		
+		var y1=120*bili;
+		var y2=y1+t3;
+		var y3=y2+t2;
+		var y4=y3+t1;
+		var y5=y4+t2-30*bili;
+		var y6=y5-t3/2;
+		var y7=y3+t7;
+		var y8=y4-t7;
+		
+		var y9=y3-t12;
+		var y0=y9-t10;
+		var y10=y4+t12*3/4;
+		var y11=y10-t10/2;
+	
+		this.type="fr";
+		this.name="FR";
+		allcop[this.name]=this;
+		this.x=x;
+		this.y=y;
+		this.width=x5;
+		this.shape={};
+		this.is_line=cop_is_line;
+		this.candel=false;
+		
+		var temp=new createjs.Shape();
+		temp.type="body";
+		temp.x=x;
+		temp.y=y;
+		var g=temp.graphics;
+		
+		g.setStrokeStyle(3*bili);
+		g.beginFill("#ffffff");
+		g.beginStroke("#123dfe");
+		g.drawRect(x8-roser-15*bili,jxz_up_down_h,1.5*(x9-x8)+2*roser+30*bili,jxz_rect_h);
+		
+		g.beginFill("#ffffff");
+		g.setStrokeStyle(4*bili);
+		g.beginStroke("#000000");
+		g.moveTo(0,y1);
+		g.lineTo(x1,y2);
+		g.lineTo(x2,y3);
+		g.lineTo(x2,y4);
+		g.lineTo(x1,y5);
+		g.lineTo(0,y6);
+		g.lineTo(0,y1);
+		//g.drawRect(x1,y1,2*t3,t9);
+		//g.drawRect(x2,y3,2*t3,t6);
+		g.moveTo(0,y1);
+		g.lineTo(x3,y1);
+		g.lineTo(x4,y2);
+		g.lineTo(x1,y2);
+		g.lineTo(0,y1);
+		g.moveTo(x1,y2);
+		g.lineTo(x4,y2);
+		g.lineTo(x5,y3);
+		g.lineTo(x2,y3);
+		g.lineTo(x1,y2);
+		g.drawRect(x2,y3,t4,t1);
+		g.moveTo(x2,y4);
+		g.lineTo(x5,y4);
+		g.lineTo(x4,y5);
+		g.lineTo(x1,y5);
+		g.lineTo(x2,y4);
+		/*
+		g.moveTo(x1,y5);
+		g.lineTo(x4,y5);
+		g.lineTo(x3,y6);
+		g.lineTo(0,y6);
+		g.lineTo(x1,y5);
+		*/
+		g.moveTo(x2+x3/3,y3);
+		g.lineTo(x1+x3/3,y2);
+		g.lineTo(x1+x3/3,y3);
+		g.moveTo(x2+x3*2/3,y3);
+		g.lineTo(x1+x3*2/3,y2);
+		g.lineTo(x1+x3*2/3,y3);
+		g.moveTo(x4,y2);
+		g.lineTo(x4,y3);
+		g.moveTo(x2+x3/3,y4);
+		g.lineTo(x1+x3/3,y5);
+		g.lineTo(x1+x3/3,y4);
+		g.moveTo(x2+x3*2/3,y4);
+		g.lineTo(x1+x3*2/3,y5);
+		g.lineTo(x1+x3*2/3,y4);
+		g.moveTo(x4,y5);
+		g.lineTo(x4,y4);
+		
+		
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x6,y7,12*bili);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x6,y8,12*bili);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x7,y8,12*bili);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x7,y7,12*bili);
+		g.endStroke();
+		
+		g.setStrokeStyle(5*bili);
+		g.beginFill();
+		g.beginStroke("red");
+		g.moveTo(x6,y3);
+		g.lineTo(x6,y9);
+		g.lineTo(x8,y0);
+		g.moveTo(x7,y3);
+		g.lineTo(x7,y9);
+		g.lineTo(x9,y0);
+		g.moveTo(x6,y4);
+		g.lineTo(x6,y10);
+		g.lineTo(x8,y11);
+		g.lineTo(x8,rose_padinging+roser+jxz_up_down_h);
+		g.moveTo(x7,y4);
+		g.lineTo(x7,y10);
+		g.lineTo(x9,y11);
+		g.lineTo(x9,rose_padinging+roser+jxz_up_down_h);
+		g.moveTo(x8+(x9-x8)/2,rose_padinging+roser+jxz_up_down_h);
+		g.lineTo(x8+(x9-x8)/2,rose_padinging+roser+jxz_up_down_h-40*bili);
+		g.lineTo(x8+(x9-x8)/2-25*bili,rose_padinging+roser+jxz_up_down_h-40*bili-10*bili);
+		g.moveTo(x9+(x9-x8)/2,rose_padinging+roser+jxz_up_down_h);
+		g.lineTo(x9+(x9-x8)/2,rose_padinging+roser+jxz_up_down_h-40*bili);
+		g.lineTo(x9+(x9-x8)/2-25*bili,rose_padinging+roser+jxz_up_down_h-40*bili-10*bili);
+		
+		/*g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x8,y1+t10,1.1*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x9,y1+t10,1.1*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x9,y6-t10,1.1*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(x8,y6-t10,1.1*roser);
+		g.endStroke();
+		g.setStrokeStyle(8*bili);
+		g.beginStroke("#ffc125");
+		g.moveTo(x8,y1);
+		g.lineTo(x8,y1-t11);
+		g.lineTo(x8-t1,y1-t11-t2);
+		g.moveTo(x8,y6);
+		g.lineTo(x8,y6+t11);
+		g.lineTo(x8-t1,y6+t11-t7);
+		g.lineTo(x8-t1,y8+roser+rose_padinging);
+		g.beginStroke("red");
+		g.moveTo(x9,y1);
+		g.lineTo(x9,y1-t11);
+		g.lineTo(x9-t1,y1-t11-t2);
+		g.moveTo(x9,y6);
+		g.lineTo(x9,y6+t11);
+		g.lineTo(x9-t1,y6+t11-t7);
+		g.lineTo(x9-t1,y8+roser+rose_padinging);
+		*/
+		
+		stage.addChild(temp);
+		this.shape.body=temp;
+		
+		var text_name = new createjs.Text(this.name, "15px 微软雅黑", "#000000");
+		text_name.x = x2+20*bili;
+		text_name.y = y3+40*bili;
+		text_name.textBaseline = "top";
+		stage.addChild(text_name);
+		this.shape.text_name=text_name;
+		
+		this.shape.fr_zjx0=rose(this.x+x8,this.y+rose_padinging+roser+jxz_up_down_h,true,"fr_zjx0","down");
+		this.shape.fr_zjx1=rose(this.x+x8+(x9-x8)/2,this.y+rose_padinging+roser+jxz_up_down_h,true,"fr_zjx1","down");
+		this.shape.fr_zjx2=rose(this.x+x9,this.y+rose_padinging+roser+jxz_up_down_h,true,"fr_zjx2","down");
+		this.shape.fr_zjx3=rose(this.x+x9+(x9-x8)/2,this.y+rose_padinging+roser+jxz_up_down_h,true,"fr_zjx3","down");
+		//this.shape.fu2_rightrose=rose(this.x+x10+t3+2*roser+rose_padinging,this.y+rose_padinging+roser+jxz_up_down_h,true,"fu2_rightrose","down");
+		this.now=[["fr_zjx0","fr_zjx1"]];
+		
+		for(var x in this.shape){
+		this.shape[x].component=this;//元件shape的component属性
+		if(this.shape[x].type=="body"){//jxz，kabody和部分rose的属性为body
+			this.shape[x].addEventListener("mousedown",drag);//拖动
+			//this.shape[x].addEventListener("dblclick",bodydbclik);//双击删除元件
+			}else if(this.shape[x].type=="canline"){
+				this.shape[x].addEventListener("click",roseclik);//接线
+			}
+		}
+		
+		this.plc=function(){
+			return;
+		}
+	}	
+	function QS(x,y){
+		var t1=90*bili;
+		var t2=10*bili;
+		var t3=30*bili;
+		var t4=40*bili;
+		var t5=10*bili;
+		var t6=40*bili;
+		var t7=20*bili;
+		var t8=10*bili;
+		var t9=30*bili;
+		var t10=70*bili;
+		var t11=180*bili;
+		var t12=30*bili;
+		
+		var h2=80*bili;
+		var h3=h2+t2;
+		var h4=h3+t1;
+		var h5=h4+t8;
+		var h6=h5+t11;
+		var h7=h6-0.5*t8;
+		var h9=h7+t1;
+		var h8=h9-t5;
+		var h10=h9+50*bili;
+		var w1=t3;
+		var w2=w1+t7;
+		var w3=230*bili;
+		var w4=w3+t3;
+		var w5=w4+t7;
+		var w6=w5+t9;
+		var w7=w6+t10;
+		var w8=w7+t10;
+		var w9=2*w3;
+		var w10=w9+w1;
+		var w11=w10+t7;
+		var w12=w1+t9;
+		var w13=w12+t10;
+		var w14=w13+t10;
+	
+		allcop.QS=this;
+		this.type="QS";
+		this.name="QS";
+		this.x=x;
+		this.y=y;
+		this.width=w11;
+		this.shape={};
+		this.is_line=cop_is_line;
+		this.counter=0;
+		this.candel=false;
+		
+		var temp=new createjs.Shape();
+		temp.type="body";
+		temp.x=x;
+		temp.y=y;
+		var g=temp.graphics;
+		
+		g.beginFill("#ffffff");
+		g.setStrokeStyle(4*bili);
+		g.beginStroke("#000000");
+		g.moveTo(0,h2);
+		g.lineTo(w1,h3);
+		g.lineTo(w1,h4);
+		g.lineTo(w2,h5);
+		g.lineTo(w2,h6);
+		g.lineTo(w1,h7);
+		g.lineTo(w1,h9);
+		g.lineTo(0,h8);
+		g.lineTo(0,h2);
+		g.moveTo(0,h2);
+		g.lineTo(w9,h2);
+		g.lineTo(w10,h3);
+		g.drawRect(w1,h3,w9,t1);
+		g.drawRect(w2,h5,w9,t11);
+		g.moveTo(w10,h4);
+		g.lineTo(w11,h5);
+		g.moveTo(w10,h6);
+		g.lineTo(w10,h9);
+		g.lineTo(w1,h9);
+		g.moveTo(w3,h2);
+		g.lineTo(w4,h3);
+		g.lineTo(w4,h4);
+		g.lineTo(w5,h5);
+		g.lineTo(w5,h6);
+		g.moveTo(w4,h6);
+		g.lineTo(w4,h9);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(w6,h3+t12,1.3*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(w7,h3+t12,1.3*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(w8,h3+t12,1.3*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(w12,h9-t12,1.3*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(w13,h9-t12,1.3*roser);
+		g.endStroke();
+		g.beginStroke("#000000");
+		g.drawCircle(w14,h9-t12,1.3*roser);
+		g.endStroke();
+		g.setStrokeStyle(8*bili);
+		g.beginStroke("#ffc125");
+		g.moveTo(w6,h3);
+		g.lineTo(w6,h3-t4);
+		g.lineTo(w6-t3,h3-t4-t2);
+		g.moveTo(w12,h9);
+		g.lineTo(w12,h10);
+		g.lineTo(w12-t3,h10-t5);
+		g.beginStroke("green");
+		g.moveTo(w7,h3);
+		g.lineTo(w7,h3-t4);
+		g.lineTo(w7-t3,h3-t4-t2);
+		g.moveTo(w13,h9);
+		g.lineTo(w13,h10);
+		g.lineTo(w13-t3,h10-t5);
+		g.beginStroke("red");
+		g.moveTo(w8,h3);
+		g.lineTo(w8,h3-t4);
+		g.lineTo(w8-t3,h3-t4-t2);
+		g.moveTo(w14,h9);
+		g.lineTo(w14,h10);
+		g.lineTo(w14-t3,h10-t5);
+				
+		stage.addChild(temp);
+		this.shape.body=temp;
+		
+		var text_name = new createjs.Text(this.name, "15px 微软雅黑", "#000000");
+		text_name.x = w2+50*bili;
+		text_name.y = h5+70*bili;
+		text_name.textBaseline = "Alphabetic";
+		stage.addChild(text_name);
+		this.shape.text_name=text_name;
+		
+		var b_1=10*bili;
+		var b_2=40*bili;
+		var b_3=10*bili;
+		var b_4=40*bili;
+		var b_5=35*bili;
+		var b_6=10*bili;
+		var x1=b_1;
+		var x2=x1+b_3;
+		var x3=x1+b_4;
+		var x4=x3+b_3;
+		var x5=x3+b_5;
+		var x6=x5+b_3;
+		var x7=x5+b_4;
+		var x8=x7+b_3;
+		var x9=x7+b_5;
+		var x10=x9+b_3;
+		var x11=x9+b_4;
+		var x12=x11+b_3;
+		var x13=x11+b_1;
+		var y1=b_6;
+		var y2=y1+0.5*b_2;
+		var y3=y1+b_2;
+		var g_off = new createjs.Graphics();
+		g_off.setStrokeStyle(4*bili);
+		g_off.beginStroke("#40e0d0");
+		g_off.beginFill("#40e0d0");
+		//g_off.drawCircle(0,0,15);
+		g_off.bezierCurveTo(x1,y1,x2,y2,x1,y3);
+		g_off.lineTo(x3,y3);
+		g_off.bezierCurveTo(x3,y3,x4,y2,x3,y1);
+		g_off.lineTo(x1,y1);
+		g_off.moveTo(x5,y1);
+		g_off.bezierCurveTo(x5,y1,x6,y2,x5,y3);
+		g_off.lineTo(x7,y3);
+		g_off.bezierCurveTo(x7,y3,x8,y2,x7,y1);
+		g_off.lineTo(x5,y1);
+		g_off.moveTo(x9,y1);
+		g_off.bezierCurveTo(x9,y1,x10,y2,x9,y3);
+		g_off.lineTo(x11,y3);
+		g_off.bezierCurveTo(x11,y3,x12,y2,x11,y1);
+		g_off.lineTo(x9,y1);
+		
+		g_off.moveTo(x1-90*bili,y1);
+		g_off.bezierCurveTo(x1-90*bili,y1,x2-90*bili,y2,x1-90*bili,y3);
+		g_off.lineTo(x3-90*bili,y3);
+		g_off.bezierCurveTo(x3-90*bili,y3,x4-90*bili,y2,x3-90*bili,y1);
+		g_off.lineTo(x1-90*bili,y1);
+		g_off.beginStroke("#00ced1");
+		g_off.beginFill("#00ced1");
+		g_off.moveTo(-90*bili,0);
+		g_off.drawRect(-90*bili,0,b_4+2*b_1,b_6);
+		
+		g_off.beginStroke("#00ced1");
+		g_off.beginFill("#00ced1");
+		g_off.moveTo(0,y3);
+		g_off.beginStroke("#d3d3d3");
+		g_off.beginFill("#d3d3d3");
+		g_off.drawRect(0,y3,x13,y1);
+		this.g_off=g_off;
+		
+		var g_on = new createjs.Graphics();
+		g_on.setStrokeStyle(4*bili);
+		g_on.beginStroke("#40e0d0");
+		g_on.beginFill("#40e0d0");
+		//g_on.drawCircle(0,0,15);
+		g_on.bezierCurveTo(x1,y1,x2,y2,x1,y3);
+		g_on.lineTo(x3,y3);
+		g_on.bezierCurveTo(x3,y3,x4,y2,x3,y1);
+		g_on.lineTo(x1,y1);
+		g_on.moveTo(x5,y1);
+		g_on.bezierCurveTo(x5,y1,x6,y2,x5,y3);
+		g_on.lineTo(x7,y3);
+		g_on.bezierCurveTo(x7,y3,x8,y2,x7,y1);
+		g_on.lineTo(x5,y1);
+		g_on.moveTo(x9,y1);
+		g_on.bezierCurveTo(x9,y1,x10,y2,x9,y3);
+		g_on.lineTo(x11,y3);
+		g_on.bezierCurveTo(x11,y3,x12,y2,x11,y1);
+		g_on.lineTo(x9,y1);
+		
+		g_on.moveTo(x1-90*bili,y1);
+		g_on.bezierCurveTo(x1-90*bili,y1,x2-90*bili,y2,x1-90*bili,y3);
+		g_on.lineTo(x3-90*bili,y3);
+		g_on.bezierCurveTo(x3-90*bili,y3,x4-90*bili,y2,x3-90*bili,y1);
+		g_on.lineTo(x1-90*bili,y1);
+		g_on.beginStroke("#00ced1");
+		g_on.beginFill("#00ced1");
+		g_on.moveTo(-90*bili,0);
+		g_on.drawRect(-90*bili,0,b_4+2*b_1,b_6);
+		
+		g_on.beginStroke("#00ced1");
+		g_on.beginFill("#00ced1");
+		g_on.moveTo(0,0);
+		g_on.beginStroke("#d3d3d3");
+		g_on.beginFill("#d3d3d3");
+		g_on.drawRect(0,0,x13,y1);
+		this.g_on=g_on;
+		
+		var temp=new createjs.Shape();
+		temp.type="click";
+		temp.x=w5+10*bili;
+		temp.y=h6-b_2-3*b_6;
+		temp.graphics=this.g_off;
+		
+		stage.addChild(temp);
+		this.shape.g_onoff=temp;
+		
+		
+		for(var x in this.shape){
+		this.shape[x].component=this;//元件shape的component属性
+		if(this.shape[x].type=="body"){//jxz，kabody和部分rose的属性为body
+			this.shape[x].addEventListener("mousedown",drag);//拖动
+			//this.shape[x].addEventListener("dblclick",bodydbclik);//双击删除元件
+			}else if(this.shape[x].type=="canline"){
+				this.shape[x].addEventListener("click",roseclik);//接线
+			}else if(this.shape[x].type=="click"){
+				this.shape[x].addEventListener("click",function(evt){
+					var cop=evt.currentTarget.component;
+					cop.counter++;
+					if(cop.counter%2){
+						startplc=true;
+						runtime=0;
+						timer=window.setInterval("PLC()",timer_time)
+					}else{
+						startplc=false;
+					}
+				
+				});
+			}
+		}
+		
+		this.temp_state=0;
+		
+		this.plc=function(){
+			if(this.counter%2){
+						if(this.temp_state==0){is_update=true;this.temp_state=1;
+						this.shape.g_onoff.graphics=this.g_on;}
+					}else{
+						if(this.temp_state==1){is_update=true;this.temp_state=0;
+						this.shape.g_onoff.graphics=this.g_off;}
+					}
+		}
+	}
+	function PLC(){//首先查fu2两个螺丝是否都连上，如果没全部连上，提示电源没接，一行也不扫描，如果连上，后面循环的时候不用再检查，怎么实现。再查短路！如果短路，qs断开，提示短路，一行也不扫描。
+	//按钮，qs这样人为动作的画笔改变应放到cop.plc中！否者点击时sb画笔改变和ka画笔改变不同步。给sb，qs一个按下的属性！
+		//saomiaostartplc=startplc?true:false;
+		//读输入
+		runtime++;
+		ph_temp_str="";
+		console.log("行扫描第"+xxx+"次");xxx++;
+		is_update=false;
+		temparr=[];
+		temp_startplc=startplc;
+		for(x in allcop){//所有带now的元件
+			if(allcop[x].hasOwnProperty("now")){
+				temparr=temparr.concat(allcop[x].now);
+			}
+		}
+		for(i in allline){
+			temparr.push(allline[i].rose.concat());
+		}
+		fresh_line_now(temparr);
+		//行扫描.看是否有plc属性
+		/*if((FU2.shape.fu2_leftrose.line[0]==0&&FU2.shape.fu2_leftrose.line[1]==0)||(FU2.shape.fu2_rightrose.line[0]==0&&FU2.shape.fu2_rightrose.line[1]==0)){
+			//没接电源
+			alert("没接电源");
+			QS.counter=0;
+			window.clearInterval(timer);
+			return;
+		}*/
+		if(temp_rosename_number_json.hasOwnProperty("fu2_leftrose")&&temp_rosename_number_json.hasOwnProperty("fu2_rightrose")&&(temp_rosename_number_json.fu2_leftrose==temp_rosename_number_json.fu2_rightrose)){//短路
+			alert("短路");
+			QS.counter=0;
+			startplc=false;
+			//window.clearInterval(timer);
+			//return;
+		}
+		
+		for(x in allcop){
+			if(allcop[x].hasOwnProperty("plc")){
+				allcop[x].plc();
+			}
+		}
+		//pc设置50扫描周期，每次扫描周期都不update，cpu行扫描不按按钮10,按按钮25，实际扫描周期50
+		//设置50扫描周期，20个扫描周期update一次，cpu行扫描不按按钮14,按按钮34，实际扫描周期50,55
+		//设置50扫描周期，10个扫描周期update一次，cpu行扫描不按按钮16,按按钮36，实际扫描周期50,55
+		//设置50扫描周期，5个扫描周期update一次，cpu行扫描不按按钮22,按按钮39，实际扫描周期50,55（少）
+		//设置50扫描周期，每次扫描周期都update，cpu行扫描不按按钮45,按按钮66，实际扫描周期58
+		//设置10扫描周期，每次扫描周期都不update，cpu行扫描不按按钮16,按按钮47，实际扫描周期10,11,12
+		//设置10扫描周期，20个扫描周期update一次，cpu行扫描不按按钮29,按按钮53，实际扫描周期57(十分之一)，11
+		//设置10扫描周期，10个扫描周期update一次，cpu行扫描不按按钮36,按按钮62，实际扫描周期111,55少
+		//设置10扫描周期，5个扫描周期update一次，cpu行扫描不按按钮45,按按钮65，实际扫描周期10,60shao
+		//设置10扫描周期，每次扫描周期都update，cpu行扫描不按按钮50,按按钮67，实际扫描周期11（少）或58或95
+		
+		if(is_update){
+		stage.update();
+		console.log("update第"+xxxxx+"次");xxxxx++;
+		}
+		//设置50扫描周期，每次扫描周期都不update，cpu行扫描不按按钮27,按按钮36，实际扫描周期50
+		//设置50扫描周期，20个扫描周期update一次，cpu行扫描不按按钮28,按按钮38，实际扫描周期50
+		//设置50扫描周期，10个扫描周期update一次，cpu行扫描不按按钮32,按按钮40，实际扫描周期50
+		//设置50扫描周期，5个扫描周期update一次，cpu行扫描不按按钮35,按按钮44，实际扫描周期50,55（少）
+		//设置50扫描周期，每次扫描周期都update，cpu行扫描不按按钮65,按按钮79，实际扫描周期60
+		
+		//设置10扫描周期，每次扫描周期都不update，cpu行扫描不按按钮28,按按钮62，实际扫描周期10,11,12
+		//设置10扫描周期，20个扫描周期update一次，cpu行扫描不按按钮36,按按钮66，实际扫描周期57(十分之一)，10,11,12
+		//设置10扫描周期，10个扫描周期update一次，cpu行扫描不按按钮44,按按钮68，实际扫描周期10,11,12
+		//设置10扫描周期，每次扫描周期都update，cpu行扫描不按按钮68,按按钮78，实际扫描周期11（少）或58
+		if(ph_temp_str!=""){
+		$("#claer_ph_bt").show();
+		var temp=runtime*timer_time/1000;
+		ph_temp_str=ph_temp_str.substring(0,ph_temp_str.length-1);
+		$("#ph_div_in").append($("<p>"+"第"+temp+"秒——"+ph_temp_str+"</p>"));
+		}
+		if(!temp_startplc){window.clearInterval(timer);}
+	}
+	function is_xq_on(arr){
+		if(!temp_startplc){return false;}//应该有一个电源断开的函数，不必每次行扫描每个元件都执行这一步
+		if(!temp_rosename_number_json.hasOwnProperty(arr[0])||!temp_rosename_number_json.hasOwnProperty(arr[1])||!temp_rosename_number_json.hasOwnProperty("fu2_leftrose")||!temp_rosename_number_json.hasOwnProperty("fu2_rightrose")){
+			return false;
+		}
+		if(temp_rosename_number_json[arr[0]]==temp_rosename_number_json.fu2_leftrose&&temp_rosename_number_json[arr[1]]==temp_rosename_number_json.fu2_rightrose){
+			return true;
+		}else if(temp_rosename_number_json[arr[1]]==temp_rosename_number_json.fu2_leftrose&&temp_rosename_number_json[arr[0]]==temp_rosename_number_json.fu2_rightrose){
+			return true;
+		}
+		return false;
+	}
+	function closeqs(){
+		QS.counter=0;
+	}
+	function testline2(){//<span class='duan'>断</span>电延时1.1.5
+		
+			clearline();
+			clearconp();
+			
+		control.auto_postion(new kt_2(0,0));//不用auto_postion就必须add_postion line(allcop.SB3.shape.SB3red_c_0,allcop.jxp.shape.jxp_down0);
+		control.auto_postion(new km(0,0));
+		control.auto_postion(new km(0,0));
+		control.auto_postion(new km(0,0));
+		control.auto_postion(new km(0,0));
+		
+line(allcop.SB3.shape.SB3red_o_0,allcop.jxp.shape.jxp_down0);
+line(allcop.SB3.shape.SB3red_o_1,allcop.jxp.shape.jxp_down1);
+line(allcop.SB3.shape.SB3red_c_0,allcop.jxp.shape.jxp_down2);
+line(allcop.SB3.shape.SB3red_c_1,allcop.jxp.shape.jxp_down3);
+line(allcop.SB1.shape.SB1green_o_0,allcop.jxp.shape.jxp_down5);
+line(allcop.SB1.shape.SB1green_o_1,allcop.jxp.shape.jxp_down6);
+line(allcop.FU2.shape.fu2_leftrose,allcop.KM1.shape.KM1down_jxz_rose4);
+line(allcop.KM1.shape.KM1down_jxz_rose4,allcop.KM2.shape.KM2down_jxz_rose4);
+line(allcop.KM2.shape.KM2down_jxz_rose4,allcop.KT1.shape.KT1_down3);
+line(allcop.KT1.shape.KT1_down3,allcop.KM4.shape.KM4down_jxz_rose4);
+line(allcop.KM4.shape.KM4down_jxz_rose4,allcop.KM3.shape.KM3down_jxz_rose4);
+line(allcop.FU2.shape.fu2_rightrose,allcop.FR.shape.fr_zjx0);
+line(allcop.FR.shape.fr_zjx1,allcop.jxp.shape.jxp_up2);
+line(allcop.jxp.shape.jxp_up2,allcop.KM4.shape.KM4up_jxz_rose1);
+line(allcop.KM4.shape.KM4up_jxz_rose1,allcop.jxp.shape.jxp_up0);
+line(allcop.jxp.shape.jxp_up3,allcop.jxp.shape.jxp_up5);
+line(allcop.jxp.shape.jxp_up5,allcop.KM1.shape.KM1up_jxz_rose1);
+line(allcop.jxp.shape.jxp_up6,allcop.KM1.shape.KM1down_jxz_rose0);
+line(allcop.KM1.shape.KM1down_jxz_rose0,allcop.KM1.shape.KM1up_jxz_rose2);
+line(allcop.KM1.shape.KM1up_jxz_rose2,allcop.KM2.shape.KM2up_jxz_rose2);
+line(allcop.KM2.shape.KM2up_jxz_rose2,allcop.KM3.shape.KM3up_jxz_rose1);
+line(allcop.KM3.shape.KM3up_jxz_rose1,allcop.KM1.shape.KM1up_jxz_rose4);
+line(allcop.KM1.shape.KM1down_jxz_rose1,allcop.KT1.shape.KT1_down0);
+line(allcop.KM2.shape.KM2down_jxz_rose1,allcop.KT1.shape.KT1_up0);
+line(allcop.KT1.shape.KT1_down1,allcop.KM4.shape.KM4up_jxz_rose2);
+line(allcop.KM4.shape.KM4down_jxz_rose0,allcop.KM4.shape.KM4down_jxz_rose1);
+line(allcop.KM4.shape.KM4down_jxz_rose1,allcop.KM3.shape.KM3up_jxz_rose0);
+line(allcop.KM3.shape.KM3down_jxz_rose0,allcop.KM1.shape.KM1up_jxz_rose0);
+line(allcop.KM1.shape.KM1up_jxz_rose0,allcop.KM1.shape.KM1down_jxz_rose3);
+line(allcop.KM1.shape.KM1down_jxz_rose3,allcop.KM3.shape.KM3up_jxz_rose2);
+line(allcop.KM3.shape.KM3down_jxz_rose1,allcop.KM2.shape.KM2up_jxz_rose0);
+line(allcop.jxp.shape.jxp_up1,allcop.KM1.shape.KM1up_jxz_rose3);
+line(allcop.KM1.shape.KM1down_jxz_rose2,allcop.KM4.shape.KM4up_jxz_rose0);
+stage.update();
+	}
+	function getcanvas_w_h(){	
+canvas_height =window.screen.availHeight*0.82;
+canvas_width =window.screen.availWidth*0.95;//document.body.clientWidth 会变但不多
+	}
+	
+	function testline1(){//双速电机延时1.1.2
+	
+			clearline();
+			clearconp();
+		
+		control.auto_postion(new kt_1(0,0));//不用auto_postion就必须add_postion line(allcop.SB3.shape.SB3red_c_0,allcop.jxp.shape.jxp_down0);
+		control.auto_postion(new km(0,0));
+		control.auto_postion(new km(0,0));
+		control.auto_postion(new km(0,0));
+		control.auto_postion(new ka(0,0));
+		
+		line(allcop.SB3.shape.SB3red_c_0,allcop.jxp.shape.jxp_down0);
+line(allcop.SB3.shape.SB3red_c_1,allcop.jxp.shape.jxp_down1);
+line(allcop.jxp.shape.jxp_down3,allcop.SB1.shape.SB1green_o_0);
+line(allcop.SB1.shape.SB1green_o_1,allcop.jxp.shape.jxp_down4);
+line(allcop.jxp.shape.jxp_down6,allcop.SB2.shape.SB2black_o_0);
+line(allcop.SB2.shape.SB2black_o_1,allcop.jxp.shape.jxp_down7);
+line(allcop.FU2.shape.fu2_leftrose,allcop.KT1.shape.KT1_down3);
+line(allcop.KT1.shape.KT1_down3,allcop.KM1.shape.KM1down_jxz_rose4);
+line(allcop.KM1.shape.KM1down_jxz_rose4,allcop.KM2.shape.KM2down_jxz_rose4);
+line(allcop.KM2.shape.KM2down_jxz_rose4,allcop.KM3.shape.KM3down_jxz_rose4);
+line(allcop.KM3.shape.KM3down_jxz_rose4,allcop.KA1.shape.KA1down_jxz_rose7);
+line(allcop.FU2.shape.fu2_rightrose,allcop.FR.shape.fr_zjx0);
+line(allcop.FR.shape.fr_zjx1,allcop.jxp.shape.jxp_up0);
+line(allcop.jxp.shape.jxp_up1,allcop.jxp.shape.jxp_up3);
+line(allcop.jxp.shape.jxp_up3,allcop.KM1.shape.KM1up_jxz_rose1);
+line(allcop.KM1.shape.KM1up_jxz_rose1,allcop.KA1.shape.KA1up_jxz_rose1);
+line(allcop.KA1.shape.KA1up_jxz_rose1,allcop.jxp.shape.jxp_up6);
+line(allcop.jxp.shape.jxp_up6,allcop.KT1.shape.KT1_up0);
+line(allcop.KT1.shape.KT1_up0,allcop.KM2.shape.KM2up_jxz_rose1);
+line(allcop.jxp.shape.jxp_up4,allcop.KM2.shape.KM2up_jxz_rose2);
+line(allcop.KM2.shape.KM2up_jxz_rose2,allcop.KT1.shape.KT1_up2);
+line(allcop.KM2.shape.KM2down_jxz_rose1,allcop.KM3.shape.KM3up_jxz_rose2);
+line(allcop.KM3.shape.KM3down_jxz_rose1,allcop.KM1.shape.KM1up_jxz_rose0);
+line(allcop.KT1.shape.KT1_down2,allcop.KM1.shape.KM1down_jxz_rose0);
+line(allcop.KM1.shape.KM1down_jxz_rose0,allcop.KA1.shape.KA1up_jxz_rose3);
+line(allcop.KA1.shape.KA1down_jxz_rose2,allcop.KA1.shape.KA1down_jxz_rose0);
+line(allcop.KA1.shape.KA1down_jxz_rose0,allcop.jxp.shape.jxp_up7);
+line(allcop.jxp.shape.jxp_up7,allcop.KM3.shape.KM3up_jxz_rose3);
+line(allcop.KM3.shape.KM3down_jxz_rose2,allcop.KA1.shape.KA1up_jxz_rose0);
+line(allcop.KA1.shape.KA1up_jxz_rose0,allcop.KT1.shape.KT1_down0);
+line(allcop.KT1.shape.KT1_down1,allcop.KM1.shape.KM1up_jxz_rose2);
+line(allcop.KM1.shape.KM1up_jxz_rose2,allcop.KM2.shape.KM2down_jxz_rose0);
+line(allcop.KM2.shape.KM2down_jxz_rose0,allcop.KM1.shape.KM1up_jxz_rose3);
+line(allcop.KM1.shape.KM1down_jxz_rose1,allcop.KM2.shape.KM2up_jxz_rose0);
+line(allcop.KM1.shape.KM1down_jxz_rose2,allcop.KM2.shape.KM2up_jxz_rose4);
+line(allcop.KM2.shape.KM2down_jxz_rose3,allcop.KM3.shape.KM3up_jxz_rose0);
+	stage.update();
+	}
+	
+	function clearline(){
+	
+			$("#ph_div_in").empty();
+			runtime=0;
+			$("#claer_ph_bt").hide();
+	for(j in allline){
+		var line=allline[j];		
+		for(x in line.roselr){
+			if(line.roselr[x]){
+				allrose[x].line[1]=0;
+			}else{allrose[x].line[0]=0;}
+		}
+		
+		delete allline[line.name];
+		
+		for(var i=0;i<linename.length;i++){
+			if(linename[i]==line.name){linename[i]=false;}
+		}
+		stage.removeChild(line);	
+	}
+	fresh_line();
+	}
+	
+	function clearconp(){
+	resetclickrose();
+		for(j in allcop){
+		if(allcop[j].candel&&!allcop[j].is_line()){
+			delete_cop(allcop[j]);	
+		}
+		}
+	}
+	</script>
+	
+	</head>
+    <body onload="init();" style="text-align:center">
+           <canvas id="myCanvas"></canvas>
+           <div id="canvas1">
+		   </div>
+		   <script type="text/javascript" src="external/easeljs-0.8.1.min.js"></script> 	      
+		   <script type="text/javascript" src="external/jquery.js"></script>
+			<script src="external/ui/jquery.ui.core.js"></script>
+			<script src="external/ui/jquery.ui.widget.js"></script>
+			<script src="external/ui/jquery.ui.button.js"></script>
+    </body>
+</html>
